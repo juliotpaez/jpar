@@ -11,38 +11,42 @@ mod span;
 
 /// A `String` reader that moves a cursor the reader updated.
 #[derive(Debug, Clone)]
-pub struct Reader<'a> {
-    file_path: Option<&'a str>,
+pub struct Reader<'a, C = ()> {
     content: &'a str,
     cursor: Cursor,
+    context: Option<C>,
 }
 
 impl<'a> Reader<'a> {
     // CONSTRUCTORS -----------------------------------------------------------
 
-    /// Create a new `Reader` with the specified `file_path` and `content`.
-    pub fn new(file_path: &'a str, content: &'a str) -> Reader<'a> {
+    /// Create a new `Reader` with the specified `content`.
+    pub fn new(content: &'a str) -> Reader<'a, ()> {
         Reader {
-            file_path: Some(file_path),
             content,
             cursor: Cursor::new(0, 0, 1, 1),
+            context: None,
         }
     }
+}
 
-    /// Create a new `Reader` with the specified `content`.
-    pub fn from_content(content: &'a str) -> Reader<'a> {
+impl<'a, C> Reader<'a, C> {
+    // CONSTRUCTORS -----------------------------------------------------------
+
+    /// Create a new `Reader` with the specified `content` and `context`.
+    pub fn new_with_context(content: &'a str, context: C) -> Reader<'a, C> {
         Reader {
-            file_path: None,
             content,
             cursor: Cursor::new(0, 0, 1, 1),
+            context: Some(context),
         }
     }
 
     // GETTERS ----------------------------------------------------------------
 
-    /// The file path of the `Reader` if there's any.
-    pub fn file_path(&self) -> Option<&'a str> {
-        self.file_path
+    /// The associated context of the `Reader` if there's any.
+    pub fn context(&self) -> &Option<C> {
+        &self.context
     }
 
     /// The content of the `Reader`.
@@ -78,14 +82,6 @@ impl<'a> Reader<'a> {
         &self.content[self.cursor.byte_offset()..]
     }
 
-    /// The remaining content as an `Span`.
-    pub fn remaining_content_span(&self) -> Span<'a> {
-        let mut aux_reader = self.clone();
-        aux_reader.consume(self.remaining_length());
-
-        Span::new(self.content, self.cursor.clone(), aux_reader.cursor)
-    }
-
     /// The length in bytes of the content that is not already read.
     pub fn remaining_length(&self) -> usize {
         self.content.len() - self.cursor.byte_offset()
@@ -110,7 +106,7 @@ impl<'a> Reader<'a> {
     ///
     /// ```
     /// # use parfet::Reader;
-    /// let mut reader = Reader::from_content("test");
+    /// let mut reader = Reader::new("test");
     /// assert_eq!(reader.read_one(), Some('t'));
     /// assert_eq!(reader.read_one(), Some('e'));
     /// assert_eq!(reader.read_one(), Some('s'));
@@ -134,7 +130,7 @@ impl<'a> Reader<'a> {
     ///
     /// ```
     /// # use parfet::Reader;
-    /// let mut reader = Reader::from_content("test");
+    /// let mut reader = Reader::new("test");
     /// assert_eq!(reader.byte_offset(), 0);
     ///
     /// let result = reader.read("tes");
@@ -160,7 +156,7 @@ impl<'a> Reader<'a> {
     ///
     /// ```
     /// # use parfet::Reader;
-    /// let mut reader = Reader::from_content("te");
+    /// let mut reader = Reader::new("te");
     /// assert_eq!(reader.byte_offset(), 0);
     ///
     /// let result = reader.read_one_of(&['a'..='z']);
@@ -190,7 +186,7 @@ impl<'a> Reader<'a> {
     ///
     /// ```
     /// # use parfet::Reader;
-    /// let mut reader = Reader::from_content("this test");
+    /// let mut reader = Reader::new("this test");
     /// assert_eq!(reader.byte_offset(), 0);
     ///
     /// let result = reader.read_many_of(&['a'..='z']);
@@ -217,14 +213,14 @@ impl<'a> Reader<'a> {
     ///
     /// ```
     /// # use parfet::Reader;
-    /// let mut reader = Reader::from_content("this is a test");
+    /// let mut reader = Reader::new("this is a test");
     /// assert_eq!(reader.read_until("is", true), Some("th"));
     /// assert_eq!(reader.read_until("a", false), Some("is is "));
     ///
-    /// let mut reader = Reader::from_content("this is a test");
+    /// let mut reader = Reader::new("this is a test");
     /// assert_eq!(reader.read_until("xx", true), Some("this is a test"));
     ///
-    /// let mut reader = Reader::from_content("this is a test");
+    /// let mut reader = Reader::new("this is a test");
     /// assert_eq!(reader.read_until("xx", false), None);
     /// ```
     pub fn read_until(&mut self, token: &str, is_end_valid: bool) -> Option<&str> {
@@ -252,14 +248,14 @@ impl<'a> Reader<'a> {
     ///
     /// ```
     /// # use parfet::Reader;
-    /// let mut reader = Reader::from_content("this is a test");
+    /// let mut reader = Reader::new("this is a test");
     /// assert_eq!(reader.read_until_one_of(&['a'..='a', 'i'..='i'], false), Some("th"));
     /// assert_eq!(reader.read_until_one_of(&['a'..='a'], false), Some("is is "));
     ///
-    /// let mut reader = Reader::from_content("this is a test");
+    /// let mut reader = Reader::new("this is a test");
     /// assert_eq!(reader.read_until_one_of(&['x'..='x'], false), None);
     ///
-    /// let mut reader = Reader::from_content("this is a test");
+    /// let mut reader = Reader::new("this is a test");
     /// assert_eq!(reader.read_until_one_of(&['x'..='x'], true), Some("this is a test"));
     /// ```
     pub fn read_until_one_of(
@@ -291,7 +287,7 @@ impl<'a> Reader<'a> {
     ///
     /// ```
     /// # use parfet::Reader;
-    /// let mut reader = Reader::from_content("test");
+    /// let mut reader = Reader::new("test");
     /// assert_eq!(reader.peek(), Some('t'));
     /// assert_eq!(reader.peek(), Some('t'));
     /// assert_eq!(reader.read_one(), Some('t'));
@@ -315,7 +311,7 @@ impl<'a> Reader<'a> {
     ///
     /// ```
     /// # use parfet::Reader;
-    /// let mut reader = Reader::from_content("test");
+    /// let mut reader = Reader::new("test");
     /// assert_eq!(reader.byte_offset(), 0);
     ///
     /// assert_eq!(reader.continues_with("tes"), true);
@@ -336,7 +332,7 @@ impl<'a> Reader<'a> {
     ///
     /// ```
     /// # use parfet::Reader;
-    /// let mut reader = Reader::from_content("test");
+    /// let mut reader = Reader::new("test");
     /// assert_eq!(reader.byte_offset(), 0);
     ///
     /// let result = reader.continues_with_one_of(&['a'..='z']);
@@ -370,7 +366,7 @@ impl<'a> Reader<'a> {
     ///
     /// ```
     /// # use parfet::Reader;
-    /// let mut reader = Reader::from_content("this test");
+    /// let mut reader = Reader::new("this test");
     /// assert_eq!(reader.byte_offset(), 0);
     ///
     /// let result = reader.continues_with_many_of(&['a'..='z']);
@@ -408,7 +404,7 @@ impl<'a> Reader<'a> {
     ///
     /// ```
     /// # use parfet::Reader;
-    /// let mut reader = Reader::from_content("this test");
+    /// let mut reader = Reader::new("this test");
     /// reader.read("th");
     ///
     /// let from = reader.save_cursor();
@@ -436,7 +432,7 @@ impl<'a> Reader<'a> {
     ///
     /// ```
     /// # use parfet::Reader;
-    /// let mut reader = Reader::from_content("this test");
+    /// let mut reader = Reader::new("this test");
     /// reader.read("th");
     ///
     /// let from = reader.save_cursor();
@@ -460,7 +456,7 @@ impl<'a> Reader<'a> {
     ///
     /// ```
     /// # use parfet::Reader;
-    /// let mut reader = Reader::from_content("this test");
+    /// let mut reader = Reader::new("this test");
     /// reader.read("th");
     ///
     /// let cursor = reader.save_cursor();
@@ -481,7 +477,7 @@ impl<'a> Reader<'a> {
     ///
     /// ```
     /// # use parfet::Reader;
-    /// let mut reader = Reader::from_content("this test");
+    /// let mut reader = Reader::new("this test");
     /// let cursor = reader.save_cursor();
     ///
     /// assert_eq!(reader.byte_offset(), 0);
@@ -561,6 +557,18 @@ impl<'a> Reader<'a> {
     }
 }
 
+impl<'a, C: Clone> Reader<'a, C> {
+    // GETTERS ----------------------------------------------------------------
+
+    /// The remaining content as an `Span`.
+    pub fn remaining_content_span(&self) -> Span<'a> {
+        let mut aux_reader = self.clone();
+        aux_reader.consume(self.remaining_length());
+
+        Span::new(self.content, self.cursor.clone(), aux_reader.cursor)
+    }
+}
+
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
@@ -572,7 +580,7 @@ mod tests {
     #[test]
     fn test_consume_0() {
         let text = "This\nis\nthe\nfragment";
-        let mut reader = Reader::from_content(text);
+        let mut reader = Reader::new(text);
         reader.consume(0);
 
         assert_eq!(reader.byte_offset(), 0, "The offset is incorrect");
@@ -584,7 +592,7 @@ mod tests {
     #[test]
     fn test_consume() {
         let text = "This\nis\nthe\nfragment";
-        let mut reader = Reader::from_content(text);
+        let mut reader = Reader::new(text);
         reader.consume(2);
 
         assert_eq!(reader.byte_offset(), 2, "The offset is incorrect");
@@ -610,7 +618,7 @@ mod tests {
     #[test]
     fn test_consume_utf_chars() {
         let text = "モスフェト";
-        let mut reader = Reader::from_content(text);
+        let mut reader = Reader::new(text);
         reader.consume(3);
 
         assert_eq!(reader.byte_offset(), 3, "The offset is incorrect");

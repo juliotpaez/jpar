@@ -14,7 +14,11 @@ impl<'a> Span<'a> {
     // CONSTRUCTORS -----------------------------------------------------------
 
     /// Builds a new `Span` with the specified data.
-    pub(in crate) fn new(content: &'a str, start_cursor: Cursor, end_cursor: Cursor) -> Span {
+    pub(in crate::reader) fn new(
+        content: &'a str,
+        start_cursor: Cursor,
+        end_cursor: Cursor,
+    ) -> Span {
         Span {
             content,
             start_cursor,
@@ -76,7 +80,7 @@ impl<'a> Span<'a> {
     ///
     /// ```
     /// # use parfet::Reader;
-    /// let mut reader = Reader::from_content("This\nis\nthe\nfragment");
+    /// let mut reader = Reader::new("This\nis\nthe\nfragment");
     ///
     /// // ... prepare the span to contain: "his\nis\nt" ...
     /// # reader.read("T");
