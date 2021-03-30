@@ -83,9 +83,9 @@ impl<'a> Span<'a> {
     /// let mut reader = Reader::new("This\nis\nthe\nfragment");
     ///
     /// // ... prepare the span to contain: "his\nis\nt" ...
-    /// # reader.read("T");
+    /// # reader.read();
     /// # let from_cursor = reader.save_cursor();
-    /// # reader.read("his\nis\nt");
+    /// # reader.read_while(|i, c| i < "his\nis\nt".len());
     /// # let to_cursor = reader.save_cursor();
     /// let span = reader.substring(&from_cursor, &to_cursor);
     ///
