@@ -1,0 +1,9 @@
+[package]
+name = "parfet"
+version = "0.1.0"
+authors = ["Julio Treviño Páez <julio.tpaez@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+bytecount = "0.6.2"
+memchr = "2.3.4"
