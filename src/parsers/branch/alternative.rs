@@ -269,7 +269,7 @@ mod test {
             if tuple_size == i {
                 assert_eq!(result, Err(ParserResultError::NotFound));
             } else {
-                assert_eq!(result, Ok(()), "Step: {}", i);
+                assert_eq!(result, Ok("This"), "Step: {}", i);
             }
         }
     }
@@ -291,7 +291,7 @@ mod test {
             if tuple_size == i {
                 assert_eq!(result, Err(ParserResultError::NotFound));
             } else {
-                assert_eq!(result, Ok(()), "Step: {}", i);
+                assert_eq!(result, Ok("This"), "Step: {}", i);
             }
         }
     }
@@ -314,7 +314,7 @@ mod test {
             if tuple_size == i {
                 assert_eq!(result, Err(ParserResultError::NotFound));
             } else {
-                assert_eq!(result, Ok(()), "Step: {}", i);
+                assert_eq!(result, Ok("This"), "Step: {}", i);
             }
         }
     }
@@ -341,7 +341,7 @@ mod test {
             if tuple_size == i {
                 assert_eq!(result, Err(ParserResultError::NotFound));
             } else {
-                assert_eq!(result, Ok(()), "Step: {}", i);
+                assert_eq!(result, Ok("This"), "Step: {}", i);
             }
         }
     }
@@ -369,7 +369,7 @@ mod test {
             if tuple_size == i {
                 assert_eq!(result, Err(ParserResultError::NotFound));
             } else {
-                assert_eq!(result, Ok(()), "Step: {}", i);
+                assert_eq!(result, Ok("This"), "Step: {}", i);
             }
         }
     }
@@ -398,7 +398,7 @@ mod test {
             if tuple_size == i {
                 assert_eq!(result, Err(ParserResultError::NotFound));
             } else {
-                assert_eq!(result, Ok(()), "Step: {}", i);
+                assert_eq!(result, Ok("This"), "Step: {}", i);
             }
         }
     }
@@ -428,7 +428,7 @@ mod test {
             if tuple_size == i {
                 assert_eq!(result, Err(ParserResultError::NotFound));
             } else {
-                assert_eq!(result, Ok(()), "Step: {}", i);
+                assert_eq!(result, Ok("This"), "Step: {}", i);
             }
         }
     }
@@ -459,7 +459,7 @@ mod test {
             if tuple_size == i {
                 assert_eq!(result, Err(ParserResultError::NotFound));
             } else {
-                assert_eq!(result, Ok(()), "Step: {}", i);
+                assert_eq!(result, Ok("This"), "Step: {}", i);
             }
         }
     }
@@ -491,7 +491,7 @@ mod test {
             if tuple_size == i {
                 assert_eq!(result, Err(ParserResultError::NotFound));
             } else {
-                assert_eq!(result, Ok(()), "Step: {}", i);
+                assert_eq!(result, Ok("This"), "Step: {}", i);
             }
         }
     }
@@ -524,7 +524,7 @@ mod test {
             if tuple_size == i {
                 assert_eq!(result, Err(ParserResultError::NotFound));
             } else {
-                assert_eq!(result, Ok(()), "Step: {}", i);
+                assert_eq!(result, Ok("This"), "Step: {}", i);
             }
         }
     }

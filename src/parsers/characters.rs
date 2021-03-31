@@ -135,12 +135,11 @@ impl_range_parser!(
 );
 
 /// Reads a character.
-pub fn read_char<'a, C>(character: char) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<()> {
+pub fn read_char<'a, C>(character: char) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<char> {
     move |reader| match reader.peek() {
         Some(v) => {
             if v == character {
-                reader.read().unwrap();
-                Ok(())
+                Ok(reader.read().unwrap())
             } else {
                 Err(ParserResultError::NotFound)
             }
@@ -152,15 +151,14 @@ pub fn read_char<'a, C>(character: char) -> impl FnMut(&mut Reader<'a, C>) -> Pa
 /// Reads a character without taking into account the casing of the text.
 pub fn read_char_no_case<'a, C>(
     character: char,
-) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<()> {
+) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<char> {
     move |reader| match reader.peek() {
         Some(v) => {
             if character
                 .to_lowercase()
                 .any(|lower_c| lower_c == v.to_lowercase().next().unwrap())
             {
-                reader.read().unwrap();
-                Ok(())
+                Ok(reader.read().unwrap())
             } else {
                 Err(ParserResultError::NotFound)
             }
@@ -170,13 +168,13 @@ pub fn read_char_no_case<'a, C>(
 }
 
 /// Reads a text.
-pub fn read_text<'a, C>(text: &'a str) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<()> {
+pub fn read_text<'a, C>(text: &'a str) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<&'a str> {
     move |reader| {
         let mut chars = text.chars();
         let result = reader.read_while(|i, c| i < text.len() && c == chars.next().unwrap());
 
         if result.len() == text.len() {
-            Ok(())
+            Ok(result)
         } else {
             Err(ParserResultError::NotFound)
         }
@@ -186,7 +184,7 @@ pub fn read_text<'a, C>(text: &'a str) -> impl FnMut(&mut Reader<'a, C>) -> Pars
 /// Reads a text without taking into account the casing of the text.
 pub fn read_text_no_case<'a, C>(
     text: &'a str,
-) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<()> {
+) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<&'a str> {
     move |reader| {
         let mut chars = text.chars();
         let result = reader.read_while(|i, c| {
@@ -199,7 +197,7 @@ pub fn read_text_no_case<'a, C>(
         });
 
         if result.len() == text.len() {
-            Ok(())
+            Ok(result)
         } else {
             Err(ParserResultError::NotFound)
         }
@@ -279,10 +277,10 @@ mod test {
         let mut reader = Reader::new("This is a test");
 
         let result = read_char('T')(&mut reader);
-        assert_eq!(result, Ok(()));
+        assert_eq!(result, Ok('T'));
 
         let result = read_char('h')(&mut reader);
-        assert_eq!(result, Ok(()));
+        assert_eq!(result, Ok('h'));
 
         let result = read_char('T')(&mut reader);
         assert_eq!(result, Err(ParserResultError::NotFound));
@@ -293,10 +291,10 @@ mod test {
         let mut reader = Reader::new("This is a test");
 
         let result = read_char_no_case('t')(&mut reader);
-        assert_eq!(result, Ok(()));
+        assert_eq!(result, Ok('T'));
 
         let result = read_char_no_case('H')(&mut reader);
-        assert_eq!(result, Ok(()));
+        assert_eq!(result, Ok('h'));
 
         let result = read_char_no_case('T')(&mut reader);
         assert_eq!(result, Err(ParserResultError::NotFound));
@@ -307,10 +305,10 @@ mod test {
         let mut reader = Reader::new("This is a text");
 
         let result = read_text("This")(&mut reader);
-        assert_eq!(result, Ok(()));
+        assert_eq!(result, Ok("This"));
 
         let result = read_text(" is ")(&mut reader);
-        assert_eq!(result, Ok(()));
+        assert_eq!(result, Ok(" is "));
 
         let result = read_text(" and")(&mut reader);
         assert_eq!(result, Err(ParserResultError::NotFound));
@@ -321,10 +319,10 @@ mod test {
         let mut reader = Reader::new("This is a text");
 
         let result = read_text_no_case("tHIS")(&mut reader);
-        assert_eq!(result, Ok(()));
+        assert_eq!(result, Ok("This"));
 
         let result = read_text_no_case(" iS ")(&mut reader);
-        assert_eq!(result, Ok(()));
+        assert_eq!(result, Ok(" is "));
 
         let result = read_text_no_case(" And")(&mut reader);
         assert_eq!(result, Err(ParserResultError::NotFound));

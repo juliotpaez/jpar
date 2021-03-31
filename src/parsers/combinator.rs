@@ -407,43 +407,6 @@ mod test {
     }
 
     #[test]
-    #[cfg(feature = "alloc")]
-    fn test_repeat() {
-        let mut reader = Reader::new("Test");
-        let mut parser = repeat(ascii_alpha, 3);
-
-        let result = parser(&mut reader);
-        assert_eq!(result, Ok(vec!['T', 'e', 's']));
-
-        let result = parser(&mut reader);
-        assert_eq!(result, Err(ParserResultError::NotFound));
-    }
-
-    #[test]
-    #[cfg(feature = "alloc")]
-    fn test_repeat_error() {
-        let mut reader = Reader::new("This is a test");
-        let mut parser = repeat(
-            |reader| -> ParserResult<()> {
-                Err(ParserResultError::Error(ParserError {
-                    origin: "".into(),
-                    cursor: reader.save_cursor(),
-                }))
-            },
-            3,
-        );
-
-        let result = parser(&mut reader);
-        assert_eq!(
-            result,
-            Err(ParserResultError::Error(ParserError {
-                origin: "".into(),
-                cursor: reader.save_cursor(),
-            }))
-        );
-    }
-
-    #[test]
     fn test_repeat_and_count() {
         let mut reader = Reader::new("Test");
         let mut parser = repeat_and_count(ascii_alpha_quantified(1), 1..);
@@ -466,6 +429,50 @@ mod test {
                 }))
             },
             ..,
+        );
+
+        let result = parser(&mut reader);
+        assert_eq!(
+            result,
+            Err(ParserResultError::Error(ParserError {
+                origin: "".into(),
+                cursor: reader.save_cursor(),
+            }))
+        );
+    }
+}
+
+#[cfg(test)]
+#[cfg(feature = "alloc")]
+mod test_alloc {
+    use crate::parsers::characters::ascii_alpha;
+    use crate::result::ParserError;
+
+    use super::*;
+
+    #[test]
+    fn test_repeat() {
+        let mut reader = Reader::new("Test");
+        let mut parser = repeat(ascii_alpha, 3);
+
+        let result = parser(&mut reader);
+        assert_eq!(result, Ok(vec!['T', 'e', 's']));
+
+        let result = parser(&mut reader);
+        assert_eq!(result, Err(ParserResultError::NotFound));
+    }
+
+    #[test]
+    fn test_repeat_error() {
+        let mut reader = Reader::new("This is a test");
+        let mut parser = repeat(
+            |reader| -> ParserResult<()> {
+                Err(ParserResultError::Error(ParserError {
+                    origin: "".into(),
+                    cursor: reader.save_cursor(),
+                }))
+            },
+            3,
         );
 
         let result = parser(&mut reader);

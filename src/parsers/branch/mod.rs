@@ -49,7 +49,7 @@ mod test {
         let mut reader = Reader::new("This is a test");
         let mut parser = branch_if(|_| true, read_text("This"));
         let result = parser(&mut reader);
-        assert_eq!(result, Ok(Some(())));
+        assert_eq!(result, Ok(Some("This")));
 
         let mut parser = branch_if(|_| false, read_text("This"));
         let result = parser(&mut reader);
@@ -61,11 +61,11 @@ mod test {
         let mut reader = Reader::new("This is a test");
         let mut parser = branch_if_else(|_| true, read_text("This"), read_text("Th"));
         let result = parser(&mut reader);
-        assert_eq!(result, Ok((true, ())));
+        assert_eq!(result, Ok((true, "This")));
 
         let mut reader = Reader::new("This is a test");
         let mut parser = branch_if_else(|_| false, read_text("This"), read_text("Th"));
         let result = parser(&mut reader);
-        assert_eq!(result, Ok((false, ())));
+        assert_eq!(result, Ok((false, "Th")));
     }
 }
