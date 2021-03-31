@@ -16,7 +16,7 @@ pub fn map_result<'a, C, R, Rf>(
     mut parser: impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
     mut mapper: impl FnMut(R) -> Rf,
 ) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<Rf> {
-    move |reader: &mut Reader<C>| {
+    move |reader| {
         let result = parser(reader)?;
 
         Ok(mapper(result))
@@ -27,7 +27,7 @@ pub fn map_result<'a, C, R, Rf>(
 pub fn not_consume<'a, C, R>(
     mut parser: impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
 ) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R> {
-    move |reader: &mut Reader<C>| {
+    move |reader| {
         let init_cursor = reader.save_cursor();
         let result = parser(reader)?;
         reader.restore(init_cursor);
@@ -41,7 +41,7 @@ pub fn verify<'a, C, R>(
     mut parser: impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
     mut verifier: impl FnMut(&R) -> bool,
 ) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R> {
-    move |reader: &mut Reader<C>| {
+    move |reader| {
         let init_cursor = reader.save_cursor();
         let result = parser(reader)?;
 
@@ -59,7 +59,7 @@ pub fn value<'a, C, R, V: Clone>(
     mut parser: impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
     value: V,
 ) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<V> {
-    move |reader: &mut Reader<C>| {
+    move |reader| {
         let _ = parser(reader)?;
 
         Ok(value.clone())
@@ -75,7 +75,7 @@ pub fn success<'a, C, R: Clone>(value: R) -> impl FnMut(&mut Reader<'a, C>) -> P
 pub fn optional<'a, C, R>(
     mut parser: impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
 ) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<Option<R>> {
-    move |reader: &mut Reader<C>| match parser(reader) {
+    move |reader| match parser(reader) {
         Ok(v) => Ok(Some(v)),
         Err(ParserResultError::NotFound) => Ok(None),
         Err(e) => Err(e),
@@ -86,7 +86,7 @@ pub fn optional<'a, C, R>(
 pub fn optional_default<'a, C, R: Default>(
     mut parser: impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
 ) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R> {
-    move |reader: &mut Reader<C>| match parser(reader) {
+    move |reader| match parser(reader) {
         Ok(v) => Ok(v),
         Err(ParserResultError::NotFound) => Ok(R::default()),
         Err(e) => Err(e),
@@ -97,7 +97,7 @@ pub fn optional_default<'a, C, R: Default>(
 pub fn not<'a, C, R>(
     mut parser: impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
 ) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<()> {
-    move |reader: &mut Reader<C>| match parser(reader) {
+    move |reader| match parser(reader) {
         Ok(_) => Err(ParserResultError::NotFound),
         Err(ParserResultError::NotFound) => Ok(()),
         Err(e) => Err(e),
@@ -108,7 +108,7 @@ pub fn not<'a, C, R>(
 pub fn all_consumed<'a, C, R>(
     mut parser: impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
 ) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R> {
-    move |reader: &mut Reader<C>| {
+    move |reader| {
         let result = parser(reader)?;
 
         if reader.is_end() {
@@ -127,7 +127,7 @@ pub fn repeat<'a, C, R>(
 ) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<Vec<R>> {
     let quantifier = quantifier.into();
 
-    move |reader: &mut Reader<C>| {
+    move |reader| {
         let mut result = Vec::new();
 
         while !quantifier.is_finished(result.len()) {
@@ -153,7 +153,7 @@ pub fn repeat_and_count<'a, C, R>(
 ) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<usize> {
     let quantifier = quantifier.into();
 
-    move |reader: &mut Reader<C>| {
+    move |reader| {
         let mut result = 0;
         while !quantifier.is_finished(result) {
             match parser(reader) {

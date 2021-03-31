@@ -136,7 +136,7 @@ impl_range_parser!(
 
 /// Reads a character.
 pub fn read_char<'a, C>(character: char) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<()> {
-    move |reader: &mut Reader<C>| match reader.peek() {
+    move |reader| match reader.peek() {
         Some(v) => {
             if v == character {
                 reader.read().unwrap();
@@ -153,7 +153,7 @@ pub fn read_char<'a, C>(character: char) -> impl FnMut(&mut Reader<'a, C>) -> Pa
 pub fn read_char_no_case<'a, C>(
     character: char,
 ) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<()> {
-    move |reader: &mut Reader<C>| match reader.peek() {
+    move |reader| match reader.peek() {
         Some(v) => {
             if character
                 .to_lowercase()
@@ -171,7 +171,7 @@ pub fn read_char_no_case<'a, C>(
 
 /// Reads a text.
 pub fn read_text<'a, C>(text: &'a str) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<()> {
-    move |reader: &mut Reader<C>| {
+    move |reader| {
         let mut chars = text.chars();
         let result = reader.read_while(|i, c| i < text.len() && c == chars.next().unwrap());
 
@@ -187,7 +187,7 @@ pub fn read_text<'a, C>(text: &'a str) -> impl FnMut(&mut Reader<'a, C>) -> Pars
 pub fn read_text_no_case<'a, C>(
     text: &'a str,
 ) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<()> {
-    move |reader: &mut Reader<C>| {
+    move |reader| {
         let mut chars = text.chars();
         let result = reader.read_while(|i, c| {
             i < text.len()
@@ -211,7 +211,7 @@ pub fn read_any_quantified<'a, C>(
     quantifier: impl Into<Quantifier>,
 ) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<&'a str> {
     let quantifier = quantifier.into();
-    move |reader: &mut Reader<C>| match reader.read_quantified(quantifier) {
+    move |reader| match reader.read_quantified(quantifier) {
         Some(v) => Ok(v),
         None => Err(ParserResultError::NotFound),
     }
@@ -228,9 +228,7 @@ pub fn read_any_of_quantified<'a, C>(
     verifier: impl Fn(usize, char) -> bool,
 ) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<&'a str> {
     let quantifier = quantifier.into();
-    move |reader: &mut Reader<C>| match reader
-        .read_while_quantified(quantifier, |i, c| verifier(i, c))
-    {
+    move |reader| match reader.read_while_quantified(quantifier, |i, c| verifier(i, c)) {
         Some(v) => Ok(v),
         None => Err(ParserResultError::NotFound),
     }
@@ -251,9 +249,7 @@ pub fn read_none_of_quantified<'a, C>(
     verifier: impl Fn(usize, char) -> bool,
 ) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<&'a str> {
     let quantifier = quantifier.into();
-    move |reader: &mut Reader<C>| match reader
-        .read_while_quantified(quantifier, |i, c| !verifier(i, c))
-    {
+    move |reader| match reader.read_while_quantified(quantifier, |i, c| !verifier(i, c)) {
         Some(v) => Ok(v),
         None => Err(ParserResultError::NotFound),
     }
