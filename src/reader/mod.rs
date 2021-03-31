@@ -1,10 +1,10 @@
-use std::ops::RangeInclusive;
-
 use bytecount::num_chars;
 use memchr::Memchr;
 
 pub use cursor::*;
 pub use span::*;
+
+use crate::parsers::Quantifier;
 
 mod cursor;
 mod span;
@@ -128,10 +128,40 @@ impl<'a, C> Reader<'a, C> {
         }
     }
 
-    /// Checks whether the reader continues with one or more of the characters specified by `interval`.
-    /// This method does not consume the reader.
+    /// Consumes a quantified number of characters specified by `quantifier`.
     ///
-    /// **Note**: this method requires `interval` be sorted.
+    /// # Example
+    ///
+    /// ```
+    /// # use parfet::Reader;
+    /// let mut reader = Reader::new("this test");
+    ///
+    /// let result = reader.read_quantified(4);
+    /// assert_eq!(result, Some("this"));
+    ///
+    /// let result = reader.read_quantified(..=4);
+    /// assert_eq!(result, Some(" tes"));
+    ///
+    /// let result = reader.read_quantified(3..);
+    /// assert_eq!(result, None);
+    ///
+    /// let result = reader.read_quantified(..);
+    /// assert_eq!(result, Some("t"));
+    /// ```
+    pub fn read_quantified<Q>(&mut self, quantifier: Q) -> Option<&'a str>
+    where
+        Q: Into<Quantifier>,
+    {
+        match self.peek_quantified(quantifier) {
+            Some(result) => {
+                self.consume(result.len());
+                Some(result)
+            }
+            None => None,
+        }
+    }
+
+    /// Checks whether the reader continues with one or more of the characters validated by `verifier`.
     ///
     /// # Example
     ///
@@ -150,13 +180,41 @@ impl<'a, C> Reader<'a, C> {
     /// let result = reader.read_while(|i,c| ('a'..='z').contains(&c));
     /// assert_eq!(result, "test");
     /// ```
-    pub fn read_while<F>(&mut self, condition: F) -> &'a str
-    where
-        F: FnMut(usize, char) -> bool,
-    {
-        let result = self.peek_while(condition);
+    pub fn read_while(&mut self, verifier: impl FnMut(usize, char) -> bool) -> &'a str {
+        let result = self.peek_while(verifier);
         self.consume(result.len());
         result
+    }
+
+    /// Checks whether the reader continues with a quantified number of the characters validated by `verifier`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use parfet::Reader;
+    /// let mut reader = Reader::new("this test");
+    ///
+    /// let result = reader.read_while_quantified(1..=4, |i,c| c != 'i');
+    /// assert_eq!(result, Some("th"));
+    ///
+    /// let result = reader.read_while_quantified(4, |i,c| true);
+    /// assert_eq!(result, Some("is t"));
+    ///
+    /// let result = reader.read_while_quantified(50, |i,c| true);
+    /// assert_eq!(result, None);
+    /// ```
+    pub fn read_while_quantified(
+        &mut self,
+        quantifier: impl Into<Quantifier>,
+        verifier: impl FnMut(usize, char) -> bool,
+    ) -> Option<&'a str> {
+        match self.peek_while_quantified(quantifier, verifier) {
+            Some(result) => {
+                self.consume(result.len());
+                Some(result)
+            }
+            None => None,
+        }
     }
 
     /// Gets the next character if present. This method does not consume the character.
@@ -182,7 +240,51 @@ impl<'a, C> Reader<'a, C> {
         remaining.chars().next()
     }
 
-    /// Checks whether the reader continues with one or more of the characters specified by `interval`.
+    /// Checks whether the reader continues with a quantified number of characters specified by `quantifier`.
+    /// This method does not consume the reader.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use parfet::Reader;
+    /// let mut reader = Reader::new("this test");
+    /// assert_eq!(reader.byte_offset(), 0);
+    ///
+    /// let result = reader.peek_quantified(..);
+    /// assert_eq!(result, Some("this test"));
+    /// assert_eq!(reader.byte_offset(), 0);
+    ///
+    /// let result = reader.peek_quantified(4_usize);
+    /// assert_eq!(result, Some("this"));
+    /// assert_eq!(reader.byte_offset(), 0);
+    ///
+    /// let result = reader.peek_quantified(20_usize);
+    /// assert_eq!(result, None);
+    /// assert_eq!(reader.byte_offset(), 0);
+    /// ```
+    pub fn peek_quantified(&mut self, quantifier: impl Into<Quantifier>) -> Option<&'a str> {
+        let quantifier = quantifier.into();
+        let remaining = self.remaining_content();
+
+        let mut offset = 0;
+        let mut i = 0;
+        for char in remaining.chars() {
+            if quantifier.is_finished(i) {
+                break;
+            }
+
+            offset += char.len_utf8();
+            i += 1;
+        }
+
+        if quantifier.contains(i) {
+            Some(&remaining[0..offset])
+        } else {
+            None
+        }
+    }
+
+    /// Checks whether the reader continues with one or more of the characters validated by `verifier`.
     /// This method does not consume the reader.
     ///
     /// **Note**: this method requires `interval` be sorted.
@@ -206,7 +308,7 @@ impl<'a, C> Reader<'a, C> {
     /// assert_eq!(result, "");
     /// assert_eq!(reader.byte_offset(), 0);
     /// ```
-    pub fn peek_while<F>(&mut self, mut condition: F) -> &'a str
+    pub fn peek_while<F>(&mut self, mut verifier: F) -> &'a str
     where
         F: FnMut(usize, char) -> bool,
     {
@@ -214,7 +316,7 @@ impl<'a, C> Reader<'a, C> {
 
         let mut offset = 0;
         for (i, char) in remaining.chars().enumerate() {
-            if !condition(i, char) {
+            if !verifier(i, char) {
                 break;
             }
 
@@ -222,6 +324,56 @@ impl<'a, C> Reader<'a, C> {
         }
 
         &remaining[0..offset]
+    }
+
+    /// Checks whether the reader continues with a quantified number of the characters validated by `verifier`.
+    /// This method does not consume the reader.
+    ///
+    /// **Note**: this method requires `interval` be sorted.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use parfet::Reader;
+    /// let mut reader = Reader::new("this test");
+    /// assert_eq!(reader.byte_offset(), 0);
+    ///
+    /// let result = reader.peek_while_quantified(1..=4, |i,c| c != 'i');
+    /// assert_eq!(result, Some("th"));
+    /// assert_eq!(reader.byte_offset(), 0);
+    ///
+    /// let result = reader.peek_while_quantified(1..=4, |i,c| true);
+    /// assert_eq!(result, Some("this"));
+    /// assert_eq!(reader.byte_offset(), 0);
+    ///
+    /// let result = reader.peek_while_quantified(50, |i,c| true);
+    /// assert_eq!(result, None);
+    /// assert_eq!(reader.byte_offset(), 0);
+    /// ```
+    pub fn peek_while_quantified<Q, F>(&mut self, quantifier: Q, mut verifier: F) -> Option<&'a str>
+    where
+        Q: Into<Quantifier>,
+        F: FnMut(usize, char) -> bool,
+    {
+        let quantifier = quantifier.into();
+        let remaining = self.remaining_content();
+
+        let mut offset = 0;
+        let mut i = 0;
+        for char in remaining.chars() {
+            if quantifier.is_finished(i) || !verifier(i, char) {
+                break;
+            }
+
+            offset += char.len_utf8();
+            i += 1;
+        }
+
+        if quantifier.contains(i) {
+            Some(&remaining[0..offset])
+        } else {
+            None
+        }
     }
 
     /// Gets a `Span` that contains the susbstring delimited by both (`from`, `to`) cursors.
@@ -371,24 +523,6 @@ impl<'a, C> Reader<'a, C> {
             self.line() + additional_lines,
             new_column,
         );
-    }
-
-    // STATIC METHODS ---------------------------------------------------------
-
-    /// Checks whether `char` is contained in `interval`.
-    fn check_inside(char: char, interval: &[RangeInclusive<char>]) -> bool {
-        for range in interval {
-            // Exit early to optimize searching.
-            if &char < range.start() {
-                break;
-            }
-
-            if range.contains(&char) {
-                return true;
-            }
-        }
-
-        false
     }
 }
 
