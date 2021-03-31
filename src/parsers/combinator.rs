@@ -179,7 +179,7 @@ pub fn repeat_and_count<'a, C, R>(
 
 #[cfg(test)]
 mod test {
-    use crate::parsers::characters::{ascii_alpha, ascii_alpha_quantified};
+    use crate::parsers::characters::ascii_alpha_quantified;
     use crate::result::ParserError;
 
     use super::*;

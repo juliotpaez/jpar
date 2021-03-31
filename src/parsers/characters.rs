@@ -134,6 +134,35 @@ impl_range_parser!(
     "Reads a quantified number of Unicode multiline whitespaces"
 );
 
+/// Reads a character.
+pub fn read_char<'a, C>(character: char) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<()> {
+    move |reader: &mut Reader<C>| match reader.peek() {
+        Some(v) => {
+            if v == character {
+                reader.read().unwrap();
+                Ok(())
+            } else {
+                Err(ParserResultError::NotFound)
+            }
+        }
+        None => Err(ParserResultError::NotFound),
+    }
+}
+
+/// Reads a text.
+pub fn read_text<'a, C>(text: &'a str) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<()> {
+    move |reader: &mut Reader<C>| {
+        let mut chars = text.chars();
+        let result = reader.read_while(|i, c| i < text.len() && c == chars.next().unwrap());
+
+        if result == text {
+            Ok(())
+        } else {
+            Err(ParserResultError::NotFound)
+        }
+    }
+}
+
 /// Reads one character a quantified number of times.
 pub fn read_any_quantified<'a, C>(
     quantifier: impl Into<Quantifier>,
@@ -205,6 +234,34 @@ mod test {
     use crate::parsers::verifier::interval_verifier;
 
     use super::*;
+
+    #[test]
+    fn test_read_char() {
+        let mut reader = Reader::new("This is a test");
+
+        let result = read_char('T')(&mut reader);
+        assert_eq!(result, Ok(()));
+
+        let result = read_char('h')(&mut reader);
+        assert_eq!(result, Ok(()));
+
+        let result = read_char('T')(&mut reader);
+        assert_eq!(result, Err(ParserResultError::NotFound));
+    }
+
+    #[test]
+    fn test_read_text() {
+        let mut reader = Reader::new("This is a text");
+
+        let result = read_text("This")(&mut reader);
+        assert_eq!(result, Ok(()));
+
+        let result = read_text(" is ")(&mut reader);
+        assert_eq!(result, Ok(()));
+
+        let result = read_text(" and")(&mut reader);
+        assert_eq!(result, Err(ParserResultError::NotFound));
+    }
 
     #[test]
     fn test_read_any_quantified() {
