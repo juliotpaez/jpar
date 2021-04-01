@@ -1,5 +1,7 @@
 pub use alternative::*;
 
+#[cfg(feature = "alloc")]
+use crate::parsers::helpers::map_result;
 use crate::parsers::helpers::not_found_restore;
 use crate::result::ParserResult;
 use crate::Reader;
@@ -34,6 +36,21 @@ pub fn branch_if_else<'a, C, R>(
             Ok((false, else_parser(reader)?))
         }
     })
+}
+
+/// Executes the `then` parser while `condition` matches. This method discards `condition` results.
+#[cfg(feature = "alloc")]
+pub fn branch_while<'a, C, Rc, R>(
+    condition: impl FnMut(&mut Reader<'a, C>) -> ParserResult<Rc>,
+    then: impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
+) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<Vec<R>> {
+    crate::parsers::sequence::repeat(
+        ..,
+        map_result(
+            crate::parsers::sequence::tuple((condition, then)),
+            |(_, v)| v,
+        ),
+    )
 }
 
 // ----------------------------------------------------------------------------
@@ -83,5 +100,24 @@ mod test {
         );
         let result = parser(&mut reader);
         assert_eq!(result, Err(ParserResultError::NotFound));
+    }
+}
+
+#[cfg(test)]
+#[cfg(feature = "alloc")]
+mod test_alloc {
+    use crate::parsers::characters::read_text;
+
+    use super::*;
+
+    #[test]
+    fn test_branch_while() {
+        let mut reader = Reader::new("abcdabcda");
+        let mut parser = branch_while(read_text("a"), read_text("bcd"));
+        let result = parser(&mut reader);
+        assert_eq!(result, Ok(vec!["bcd", "bcd"]));
+
+        let result = parser(&mut reader);
+        assert_eq!(result, Ok(vec![]));
     }
 }
