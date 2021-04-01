@@ -1,4 +1,4 @@
-use crate::result::{ParserResult, ParserResultError};
+use crate::result::{ParserError, ParserResult, ParserResultError};
 use crate::Reader;
 
 /// Restores the reader when a not found error is returned.
@@ -68,9 +68,58 @@ where
     })
 }
 
+/// Applies a parser discarding its result and return the consumed content as result.
+pub fn consumed<'a, P, C, R>(
+    mut parser: P,
+) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<&'a str>
+where
+    P: FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
+{
+    move |reader| {
+        let init_cursor = reader.save_cursor();
+        match parser(reader) {
+            Ok(_) => Ok(reader.substring_to_current(&init_cursor).content()),
+            Err(ParserResultError::NotFound) => {
+                reader.restore(init_cursor);
+                Err(ParserResultError::NotFound)
+            }
+            Err(e) => Err(e),
+        }
+    }
+}
+
+/// Applies a parser discarding its result.
+pub fn ignore_result<'a, P, C, R>(
+    mut parser: P,
+) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<()>
+where
+    P: FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
+{
+    not_found_restore(move |reader| {
+        let _ = parser(reader)?;
+        Ok(())
+    })
+}
+
 /// Always succeeds with given value without consuming any input.
 pub fn value<'a, C, R: Clone>(value: R) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R> {
     move |_| Ok(value.clone())
+}
+
+/// Ensures that `parser` always success or returns an error.
+pub fn ensure<'a, P, C, R, Efn>(
+    mut parser: P,
+    mut error_fn: Efn,
+) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>
+where
+    P: FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
+    Efn: FnMut(&mut Reader<'a, C>) -> ParserError,
+{
+    move |reader| match parser(reader) {
+        Ok(v) => Ok(v),
+        Err(ParserResultError::NotFound) => Err(ParserResultError::Error(error_fn(reader))),
+        Err(e) => Err(e),
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -82,6 +131,7 @@ mod test {
     use crate::parsers::characters::{
         ascii_alpha1, ascii_alpha_quantified, read_any, read_any_quantified, read_text,
     };
+    use crate::parsers::sequence::tuple;
 
     use super::*;
 
@@ -148,6 +198,24 @@ mod test {
 
         let result = parser(&mut reader);
         assert_eq!(result, Err(ParserResultError::NotFound));
+    }
+
+    #[test]
+    fn test_consumed() {
+        let mut reader = Reader::new("Test 123");
+        let mut parser = consumed(tuple((read_text("Te"), read_text("st"))));
+
+        let result = parser(&mut reader);
+        assert_eq!(result, Ok("Test"));
+    }
+
+    #[test]
+    fn test_ignore_result() {
+        let mut reader = Reader::new("Test 123");
+        let mut parser = ignore_result(tuple((read_text("Te"), read_text("st"))));
+
+        let result = parser(&mut reader);
+        assert_eq!(result, Ok(()));
     }
 
     #[test]
