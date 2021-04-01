@@ -1,4 +1,4 @@
-pub use alternative::*;
+pub use alternatives::*;
 
 #[cfg(feature = "alloc")]
 use crate::parsers::helpers::map_result;
@@ -6,7 +6,7 @@ use crate::parsers::helpers::not_found_restore;
 use crate::result::ParserResult;
 use crate::Reader;
 
-mod alternative;
+mod alternatives;
 
 /// Executes the `condition` parser that returns a bool and depending on that executes or not the `then` parser.
 /// Returns None when condition is false.

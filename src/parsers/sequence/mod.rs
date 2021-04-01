@@ -1,12 +1,12 @@
-pub use repeat::*;
-pub use tuple::*;
+pub use repeats::*;
+pub use tuples::*;
 
 use crate::parsers::helpers::not_found_restore;
 use crate::result::ParserResult;
 use crate::Reader;
 
-mod repeat;
-mod tuple;
+mod repeats;
+mod tuples;
 
 /// Matches an object from the first parser and discards it,
 /// then gets an object from the second parser, and finally
