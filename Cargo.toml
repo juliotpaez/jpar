@@ -1,8 +1,15 @@
 [package]
-name = "parfet"
+name = "jpar"
 version = "0.1.0"
 authors = ["Julio Treviño Páez <julio.tpaez@gmail.com>"]
 edition = "2018"
+license = "MIT"
+repository = "https://github.com/juliotpaez/jpar"
+readme = "README.md"
+documentation = "https://docs.rs/jpar"
+keywords = ["parser", "parser-combinators", "parsing"]
+description = "A text-oriented, zero-copy, parser combinators library"
+categories = ["parsing"]
 
 [dependencies]
 bytecount = "0.6.2"
