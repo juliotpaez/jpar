@@ -11,18 +11,6 @@ pub fn end<C>(reader: &mut Reader<C>) -> ParserResult<()> {
     }
 }
 
-/// Maps the result of a parser into a new value.
-pub fn map_result<'a, C, R, Rf>(
-    mut parser: impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
-    mut mapper: impl FnMut(R) -> Rf,
-) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<Rf> {
-    move |reader| {
-        let result = parser(reader)?;
-
-        Ok(mapper(result))
-    }
-}
-
 /// Executes the parser and returns its value not consuming any character in the process.
 pub fn not_consume<'a, C, R>(
     mut parser: impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
@@ -50,23 +38,6 @@ pub fn verify<'a, C, R>(
             Err(ParserResultError::NotFound)
         }
     })
-}
-
-/// Returns the provided value if the child parser succeeds.
-pub fn value<'a, C, R, V: Clone>(
-    mut parser: impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
-    value: V,
-) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<V> {
-    move |reader| {
-        let _ = parser(reader)?;
-
-        Ok(value.clone())
-    }
-}
-
-/// Always succeeds with given value without consuming any input.
-pub fn success<'a, C, R: Clone>(value: R) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R> {
-    move |_| Ok(value.clone())
 }
 
 /// Returns None when the the parser is not found.
@@ -140,18 +111,6 @@ mod test {
     }
 
     #[test]
-    fn test_map_result() {
-        let mut reader = Reader::new("This is a test");
-        let mut parser = map_result(ascii_alpha_quantified(1..), |_| 32);
-
-        let result = parser(&mut reader);
-        assert_eq!(result, Ok(32));
-
-        let result = parser(&mut reader);
-        assert_eq!(result, Err(ParserResultError::NotFound));
-    }
-
-    #[test]
     fn test_not_consume() {
         let mut reader = Reader::new("This is a test");
         let mut parser = not_consume(ascii_alpha_quantified(1..));
@@ -194,30 +153,6 @@ mod test {
                 cursor: reader.save_cursor(),
             }))
         );
-    }
-
-    #[test]
-    fn test_value() {
-        let mut reader = Reader::new("This is a test");
-        let mut parser = value(ascii_alpha_quantified(1..), true);
-
-        let result = parser(&mut reader);
-        assert_eq!(result, Ok(true));
-
-        let result = parser(&mut reader);
-        assert_eq!(result, Err(ParserResultError::NotFound));
-    }
-
-    #[test]
-    fn test_success() {
-        let mut reader = Reader::new("This is a test");
-        let mut parser = success(true);
-
-        let result = parser(&mut reader);
-        assert_eq!(result, Ok(true));
-
-        let result = parser(&mut reader);
-        assert_eq!(result, Ok(true));
     }
 
     #[test]

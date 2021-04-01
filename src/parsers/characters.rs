@@ -1,6 +1,6 @@
 use std::ops::RangeInclusive;
 
-use crate::parsers::combinator::map_result;
+use crate::parsers::helpers::map_result;
 use crate::parsers::Quantifier;
 use crate::result::{ParserResult, ParserResultError};
 use crate::Reader;
