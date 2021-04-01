@@ -3,7 +3,7 @@ use crate::parsers::characters::{decimal_digit1, read_any_of, read_char};
 use crate::parsers::combinator::optional;
 use crate::parsers::helpers::{consumed, ensure, ignore_result};
 use crate::parsers::sequence::tuple;
-use crate::parsers::verifier::text_verifier;
+use crate::parsers::verifiers::text_verifier;
 use crate::result::{ParserError, ParserResult};
 use crate::Reader;
 

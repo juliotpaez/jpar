@@ -4,7 +4,7 @@ use parfet::parsers::characters::{
 };
 use parfet::parsers::helpers::map_result;
 use parfet::parsers::sequence::{delimited, repeat_and_fold, tuple};
-use parfet::parsers::verifier::text_verifier;
+use parfet::parsers::verifiers::text_verifier;
 use parfet::result::ParserResult;
 use parfet::Reader;
 

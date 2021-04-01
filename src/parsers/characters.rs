@@ -50,24 +50,24 @@ macro_rules! impl_range_parser {
     ($chars:expr, $name:ident, $comment:literal, $name0:ident, $comment0:literal, $name1:ident, $comment1:literal, $name_qtf:ident, $comment_qtf:literal $(,)?) => {
         #[doc = $comment]
         pub fn $name<'a, C>(reader: &mut Reader<'a, C>) -> ParserResult<char> {
-            read_any_of(crate::parsers::verifier::interval_verifier($chars))(reader)
+            read_any_of(crate::parsers::verifiers::interval_verifier($chars))(reader)
         }
 
         #[doc = $comment0]
         pub fn $name0<'a, C>(reader: &mut Reader<'a, C>) -> ParserResult<&'a str> {
-            read_any_of_quantified(0.., crate::parsers::verifier::interval_verifier($chars))(reader)
+            read_any_of_quantified(0.., crate::parsers::verifiers::interval_verifier($chars))(reader)
         }
 
         #[doc = $comment1]
         pub fn $name1<'a, C>(reader: &mut Reader<'a, C>) -> ParserResult<&'a str> {
-            read_any_of_quantified(1.., crate::parsers::verifier::interval_verifier($chars))(reader)
+            read_any_of_quantified(1.., crate::parsers::verifiers::interval_verifier($chars))(reader)
         }
 
         #[doc = $comment_qtf]
         pub fn $name_qtf<'a, C>(
             quantifier: impl Into<Quantifier>,
         ) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<&'a str> {
-            read_any_of_quantified(quantifier, crate::parsers::verifier::interval_verifier($chars))
+            read_any_of_quantified(quantifier, crate::parsers::verifiers::interval_verifier($chars))
         }
     };
 }
@@ -311,7 +311,7 @@ pub fn read_none_of<'a, C>(
 
 #[cfg(test)]
 mod test {
-    use crate::parsers::verifier::interval_verifier;
+    use crate::parsers::verifiers::interval_verifier;
 
     use super::*;
 

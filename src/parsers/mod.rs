@@ -7,4 +7,4 @@ pub mod helpers;
 pub mod numbers;
 mod quantifiers;
 pub mod sequence;
-pub mod verifier;
+pub mod verifiers;

@@ -10,7 +10,7 @@ use parfet::parsers::numbers::read_float;
 use parfet::parsers::sequence::{
     delimited, preceded, repeat_and_fold, repeat_separated, separated_tuple,
 };
-use parfet::parsers::verifier::text_verifier;
+use parfet::parsers::verifiers::text_verifier;
 use parfet::result::{ParserResult, ParserResultError};
 use parfet::Reader;
 

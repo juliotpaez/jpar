@@ -4,7 +4,7 @@ pub fn char_verifier(value: char) -> impl Fn(usize, char) -> bool {
     move |_, c| value == c
 }
 
-pub fn text_verifier<'a>(value: &'a str) -> impl Fn(usize, char) -> bool + 'a {
+pub fn text_verifier(value: &str) -> impl Fn(usize, char) -> bool + '_ {
     move |_, c| value.contains(c)
 }
 

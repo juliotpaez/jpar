@@ -37,7 +37,7 @@ impl<'a, C> Reader<'a, C> {
         Reader {
             content,
             cursor: Cursor::new(0, 0, 1, 1),
-            context: context,
+            context,
         }
     }
 
