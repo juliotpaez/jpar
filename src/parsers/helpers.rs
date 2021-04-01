@@ -32,20 +32,8 @@ pub fn map_result<'a, C, R, Rf>(
 }
 
 /// Always succeeds with given value without consuming any input.
-pub fn success<'a, C, R: Clone>(value: R) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R> {
+pub fn value<'a, C, R: Clone>(value: R) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R> {
     move |_| Ok(value.clone())
-}
-
-/// Returns the provided value if the child parser succeeds.
-pub fn value<'a, C, R, V: Clone>(
-    mut parser: impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
-    value: V,
-) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<V> {
-    move |reader| {
-        let _ = parser(reader)?;
-
-        Ok(value.clone())
-    }
 }
 
 // ----------------------------------------------------------------------------
@@ -90,19 +78,7 @@ mod test {
     #[test]
     fn test_value() {
         let mut reader = Reader::new("This is a test");
-        let mut parser = value(ascii_alpha_quantified(1..), true);
-
-        let result = parser(&mut reader);
-        assert_eq!(result, Ok(true));
-
-        let result = parser(&mut reader);
-        assert_eq!(result, Err(ParserResultError::NotFound));
-    }
-
-    #[test]
-    fn test_success() {
-        let mut reader = Reader::new("This is a test");
-        let mut parser = success(true);
+        let mut parser = value(true);
 
         let result = parser(&mut reader);
         assert_eq!(result, Ok(true));
