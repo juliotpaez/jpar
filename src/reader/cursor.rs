@@ -28,23 +28,27 @@ impl Cursor {
     // GETTERS ----------------------------------------------------------------
 
     /// The position of the `Cursor` in bytes.
+    #[inline]
     pub fn byte_offset(&self) -> usize {
         self.byte_offset
     }
 
     /// The position of the `Cursor` in characters.
+    #[inline]
     pub fn char_offset(&self) -> usize {
         self.char_offset
     }
 
     /// The line number in which the `Cursor` is placed.
     /// It starts at line 1.
+    #[inline]
     pub fn line(&self) -> usize {
         self.line
     }
 
     /// The column number in which the `Cursor` is placed.
     /// It starts at column 1.
+    #[inline]
     pub fn column(&self) -> usize {
         self.column
     }

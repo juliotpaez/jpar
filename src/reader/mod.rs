@@ -1,5 +1,4 @@
 use bytecount::num_chars;
-use memchr::Memchr;
 
 pub use cursor::*;
 pub use span::*;
@@ -128,6 +127,26 @@ impl<'a, C> Reader<'a, C> {
         }
     }
 
+    /// Consumes the next characters if match `text` moving the start index forward.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use parfet::Reader;
+    /// let mut reader = Reader::new("test");
+    /// assert!(reader.read_text("te"));
+    /// assert!(reader.read_text("st"));
+    /// assert!(!reader.read_text("123"));
+    /// ```
+    pub fn read_text(&mut self, text: &str) -> bool {
+        if self.peek_text(text) {
+            self.consume(text.len());
+            true
+        } else {
+            false
+        }
+    }
+
     /// Consumes a quantified number of characters specified by `quantifier`.
     ///
     /// # Example
@@ -240,6 +259,23 @@ impl<'a, C> Reader<'a, C> {
         remaining.chars().next()
     }
 
+    /// Gets the next characters if match `text`. This method does not consume the characters.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use parfet::Reader;
+    /// let mut reader = Reader::new("test");
+    /// assert!(reader.peek_text("te"));
+    /// assert!(reader.peek_text("test"));
+    /// assert!(!reader.peek_text("123"));
+    /// ```
+    pub fn peek_text(&self, text: &str) -> bool {
+        let remaining = self.remaining_content();
+        let text_len = text.len();
+        remaining.len() >= text_len && &remaining[..text_len] == text
+    }
+
     /// Checks whether the reader continues with a quantified number of characters specified by `quantifier`.
     /// This method does not consume the reader.
     ///
@@ -262,7 +298,7 @@ impl<'a, C> Reader<'a, C> {
     /// assert_eq!(result, None);
     /// assert_eq!(reader.byte_offset(), 0);
     /// ```
-    pub fn peek_quantified(&mut self, quantifier: impl Into<Quantifier>) -> Option<&'a str> {
+    pub fn peek_quantified(&self, quantifier: impl Into<Quantifier>) -> Option<&'a str> {
         let quantifier = quantifier.into();
         let remaining = self.remaining_content();
 
@@ -308,7 +344,7 @@ impl<'a, C> Reader<'a, C> {
     /// assert_eq!(result, "");
     /// assert_eq!(reader.byte_offset(), 0);
     /// ```
-    pub fn peek_while<F>(&mut self, mut verifier: F) -> &'a str
+    pub fn peek_while<F>(&self, mut verifier: F) -> &'a str
     where
         F: FnMut(usize, char) -> bool,
     {
@@ -350,7 +386,7 @@ impl<'a, C> Reader<'a, C> {
     /// assert_eq!(result, None);
     /// assert_eq!(reader.byte_offset(), 0);
     /// ```
-    pub fn peek_while_quantified<Q, F>(&mut self, quantifier: Q, mut verifier: F) -> Option<&'a str>
+    pub fn peek_while_quantified<Q, F>(&self, quantifier: Q, mut verifier: F) -> Option<&'a str>
     where
         Q: Into<Quantifier>,
         F: FnMut(usize, char) -> bool,
@@ -501,28 +537,22 @@ impl<'a, C> Reader<'a, C> {
         let offset = self.byte_offset();
         let new_offset = offset + count;
         let consumed_fragment = &self.content[offset..new_offset];
-        let additional_chars = num_chars(consumed_fragment.as_bytes());
-        let additional_lines = Memchr::new(b'\n', consumed_fragment.as_bytes()).count();
+        let mut column = self.cursor.column();
+        let mut line = self.cursor.line();
+        let mut char_offset = self.cursor.char_offset();
 
-        // When the line change, count previous characters. Otherwise count only consumed chars to speed-up.
-        let new_column = if additional_lines == 0 {
-            self.column() + num_chars(consumed_fragment.as_bytes())
-        } else {
-            let bytes_before_self = &self.content[..new_offset];
-            let start_position = match memchr::memrchr(b'\n', bytes_before_self.as_bytes()) {
-                Some(pos) => new_offset - pos,
-                None => new_offset + 1,
-            };
+        for char in consumed_fragment.chars() {
+            if char == '\n' {
+                column = 1;
+                line += 1;
+            } else {
+                column += 1;
+            }
 
-            num_chars(bytes_before_self[new_offset - (start_position - 1)..].as_bytes()) + 1
-        };
+            char_offset += 1;
+        }
 
-        self.cursor = Cursor::new(
-            new_offset,
-            self.char_offset() + additional_chars,
-            self.line() + additional_lines,
-            new_column,
-        );
+        self.cursor = Cursor::new(new_offset, char_offset, line, column);
     }
 }
 

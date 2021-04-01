@@ -47,10 +47,20 @@ pub static UCD_MULTILINE_WHITESPACE_CHARS: &[RangeInclusive<char>] = &[
 ];
 
 macro_rules! impl_range_parser {
-    ($name:ident, $name_qtf:ident, $chars:expr, $comment:literal, $comment_qtf:literal) => {
+    ($chars:expr, $name:ident, $comment:literal, $name0:ident, $comment0:literal, $name1:ident, $comment1:literal, $name_qtf:ident, $comment_qtf:literal $(,)?) => {
         #[doc = $comment]
         pub fn $name<'a, C>(reader: &mut Reader<'a, C>) -> ParserResult<char> {
             read_any_of(crate::parsers::verifier::interval_verifier($chars))(reader)
+        }
+
+        #[doc = $comment0]
+        pub fn $name0<'a, C>(reader: &mut Reader<'a, C>) -> ParserResult<&'a str> {
+            read_any_of_quantified(0.., crate::parsers::verifier::interval_verifier($chars))(reader)
+        }
+
+        #[doc = $comment1]
+        pub fn $name1<'a, C>(reader: &mut Reader<'a, C>) -> ParserResult<&'a str> {
+            read_any_of_quantified(1.., crate::parsers::verifier::interval_verifier($chars))(reader)
         }
 
         #[doc = $comment_qtf]
@@ -63,74 +73,110 @@ macro_rules! impl_range_parser {
 }
 
 impl_range_parser!(
-    ascii_alpha,
-    ascii_alpha_quantified,
     ASCII_ALPHA_CHARS,
+    ascii_alpha,
     "Reads one ASCII alpha character",
-    "Reads a quantified number of ASCII alpha characters"
+    ascii_alpha0,
+    "Reads zero or more ASCII alpha characters",
+    ascii_alpha1,
+    "Reads one or more ASCII alpha characters",
+    ascii_alpha_quantified,
+    "Reads a quantified number of ASCII alpha characters",
 );
 
 impl_range_parser!(
-    ascii_alphanumeric,
-    ascii_alphanumeric_quantified,
     ASCII_ALPHANUMERIC_CHARS,
-    "ASCII alphanumeric character",
+    ascii_alphanumeric,
+    "Reads one ASCII alphanumeric character",
+    ascii_alphanumeric0,
+    "ASCII zero or more alphanumeric characters",
+    ascii_alphanumeric1,
+    "ASCII one or more alphanumeric characters",
+    ascii_alphanumeric_quantified,
     "Reads a quantified number of ASCII alphanumeric characters"
 );
 
 impl_range_parser!(
-    binary_digit,
-    binary_digit_quantified,
     BINARY_DIGITS_CHARS,
+    binary_digit,
     "Reads one binary digit",
+    binary_digit0,
+    "Reads zero or more binary digits",
+    binary_digit1,
+    "Reads one or more binary digits",
+    binary_digit_quantified,
     "Reads a quantified number of binary digits"
 );
 
 impl_range_parser!(
-    octal_digit,
-    octal_digit_quantified,
     OCTAL_DIGITS_CHARS,
+    octal_digit,
     "Reads one octal digit",
+    octal_digit0,
+    "Reads zero or more octal digits",
+    octal_digit1,
+    "Reads one or more octal digits",
+    octal_digit_quantified,
     "Reads a quantified number of octal digits"
 );
 
 impl_range_parser!(
-    decimal_digit,
-    decimal_digit_quantified,
     DECIMAL_DIGITS_CHARS,
+    decimal_digit,
     "Reads one decimal digit",
+    decimal_digit0,
+    "Reads zero or more decimal digits",
+    decimal_digit1,
+    "Reads one or more decimal digits",
+    decimal_digit_quantified,
     "Reads a quantified number of decimal digits"
 );
 
 impl_range_parser!(
-    hexadecimal_digit,
-    hexadecimal_digit_quantified,
     HEXADECIMAL_DIGITS_CHARS,
+    hexadecimal_digit,
     "Reads one hexadecimal digit",
+    hexadecimal_digit0,
+    "Reads zero or more hexadecimal digits",
+    hexadecimal_digit1,
+    "Reads one or more hexadecimal digits",
+    hexadecimal_digit_quantified,
     "Reads a quantified number of hexadecimal digits"
 );
 
 impl_range_parser!(
-    ucd_whitespace,
-    ucd_whitespace_quantified,
     UCD_WHITESPACE_CHARS,
+    ucd_whitespace,
     "Reads one Unicode whitespace",
+    ucd_whitespace0,
+    "Reads zero or more Unicode whitespaces",
+    ucd_whitespace1,
+    "Reads one or more Unicode whitespaces",
+    ucd_whitespace_quantified,
     "Reads a quantified number of Unicode whitespaces"
 );
 
 impl_range_parser!(
-    ucd_single_line_whitespace,
-    ucd_single_line_whitespace_quantified,
     UCD_SINGLE_LINE_WHITESPACE_CHARS,
+    ucd_single_line_whitespace,
     "Reads one Unicode single-line whitespace",
+    ucd_single_line_whitespace0,
+    "Reads zero or more Unicode single-line whitespaces",
+    ucd_single_line_whitespace1,
+    "Reads one or more Unicode single-line whitespaces",
+    ucd_single_line_whitespace_quantified,
     "Reads a quantified number of Unicode single-line whitespaces"
 );
 
 impl_range_parser!(
-    ucd_multiline_whitespace,
-    ucd_multiline_whitespace_quantified,
     UCD_MULTILINE_WHITESPACE_CHARS,
+    ucd_multiline_whitespace,
     "Reads one Unicode multiline whitespace",
+    ucd_multiline_whitespace0,
+    "Reads zero or more Unicode multiline whitespaces",
+    ucd_multiline_whitespace1,
+    "Reads one or more Unicode multiline whitespaces",
+    ucd_multiline_whitespace_quantified,
     "Reads a quantified number of Unicode multiline whitespaces"
 );
 
@@ -170,11 +216,8 @@ pub fn read_char_no_case<'a, C>(
 /// Reads a text.
 pub fn read_text<'a, C>(text: &'a str) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<&'a str> {
     move |reader| {
-        let mut chars = text.chars();
-        let result = reader.read_while(|i, c| i < text.len() && c == chars.next().unwrap());
-
-        if result.len() == text.len() {
-            Ok(result)
+        if reader.read_text(text) {
+            Ok(text)
         } else {
             Err(ParserResultError::NotFound)
         }
