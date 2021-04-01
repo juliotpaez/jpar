@@ -241,12 +241,8 @@ mod test {
         let mut reader = Reader::new("This is a test");
 
         let result = {
-            let mut parser = repeat_and_fold(
-                ..=4,
-                String::new(),
-                |a, b| format!("{}{}", a, b),
-                read_any(),
-            );
+            let mut parser =
+                repeat_and_fold(..=4, String::new(), |a, b| format!("{}{}", a, b), read_any);
             parser(&mut reader)
         };
 

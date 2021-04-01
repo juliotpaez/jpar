@@ -93,7 +93,7 @@ mod test {
     #[test]
     fn test_map_parser() {
         let mut reader = Reader::new("Test 123");
-        let mut parser = map_parser(read_any_quantified(3), read_any());
+        let mut parser = map_parser(read_any_quantified(3), read_any);
 
         let result = parser(&mut reader);
         assert_eq!(result, Ok('T'));

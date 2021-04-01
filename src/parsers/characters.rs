@@ -216,8 +216,8 @@ pub fn read_any_quantified<'a, C>(
 }
 
 /// Reads one character.
-pub fn read_any<'a, C>() -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<char> {
-    map_result(read_any_quantified(1), |v| v.chars().next().unwrap())
+pub fn read_any<C>(reader: &mut Reader<C>) -> ParserResult<char> {
+    map_result(read_any_quantified(1), |v| v.chars().next().unwrap())(reader)
 }
 
 /// Reads one character that is inside `interval` a quantified number of times.
