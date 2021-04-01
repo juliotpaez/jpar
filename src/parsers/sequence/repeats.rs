@@ -5,10 +5,13 @@ use crate::Reader;
 
 /// Repeats a parser a quantified number of times.
 #[cfg(feature = "alloc")]
-pub fn repeat<'a, C, R>(
+pub fn repeat<'a, P, C, R>(
     quantifier: impl Into<Quantifier>,
-    mut parser: impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
-) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<Vec<R>> {
+    mut parser: P,
+) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<Vec<R>>
+where
+    P: FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
+{
     let quantifier = quantifier.into();
 
     not_found_restore(move |reader| {
@@ -32,11 +35,15 @@ pub fn repeat<'a, C, R>(
 
 /// Alternates between two parsers to produce a list of elements.
 #[cfg(feature = "alloc")]
-pub fn repeat_separated<'a, C, R, RSep>(
+pub fn repeat_separated<'a, P, S, C, R, RSep>(
     quantifier: impl Into<Quantifier>,
-    mut parser: impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
-    mut separator: impl FnMut(&mut Reader<'a, C>) -> ParserResult<RSep>,
-) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<Vec<R>> {
+    mut parser: P,
+    mut separator: S,
+) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<Vec<R>>
+where
+    P: FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
+    S: FnMut(&mut Reader<'a, C>) -> ParserResult<RSep>,
+{
     let quantifier = quantifier.into();
 
     not_found_restore(move |reader| {
@@ -117,12 +124,16 @@ pub fn repeat_to_fill<'a, C, R>(
 }
 
 /// Applies a parser until it fails and accumulates the results using a given function and initial value.
-pub fn repeat_and_fold<'a, C, R: Clone, Rp>(
+pub fn repeat_and_fold<'a, P, F, C, R: Clone, Rp>(
     quantifier: impl Into<Quantifier>,
     init: R,
-    fold: impl Fn(R, Rp) -> R,
-    mut parser: impl FnMut(&mut Reader<'a, C>) -> ParserResult<Rp>,
-) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R> {
+    fold: F,
+    mut parser: P,
+) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>
+where
+    P: FnMut(&mut Reader<'a, C>) -> ParserResult<Rp>,
+    F: Fn(R, Rp) -> R,
+{
     let quantifier = quantifier.into();
 
     not_found_restore(move |reader| {
@@ -149,10 +160,14 @@ pub fn repeat_and_fold<'a, C, R: Clone, Rp>(
 
 /// Gets a number from the first parser, then applies the second parser that many times.
 #[cfg(feature = "alloc")]
-pub fn count_and_repeat<'a, C, R>(
-    mut repetitions: impl FnMut(&mut Reader<'a, C>) -> ParserResult<usize>,
-    mut parser: impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
-) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<Vec<R>> {
+pub fn count_and_repeat<'a, Rep, P, C, R>(
+    mut repetitions: Rep,
+    mut parser: P,
+) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<Vec<R>>
+where
+    Rep: FnMut(&mut Reader<'a, C>) -> ParserResult<usize>,
+    P: FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
+{
     not_found_restore(move |reader| {
         let repetitions = repetitions(reader)?;
         let mut result = Vec::with_capacity(repetitions);

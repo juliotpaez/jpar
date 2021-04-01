@@ -10,9 +10,10 @@ pub trait Alternative<'a, C, R> {
 }
 
 /// Returns the first alternative that matches in order.
-pub fn alternative<'a, C, R>(
-    mut parsers: impl Alternative<'a, C, R>,
-) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R> {
+pub fn alternative<'a, P, C, R>(mut parsers: P) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>
+where
+    P: Alternative<'a, C, R>,
+{
     move |reader| {
         let mut i = 0;
         while let Some(value) = parsers.choice(i, reader) {

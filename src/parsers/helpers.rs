@@ -20,10 +20,14 @@ pub fn not_found_restore<'a, C, R>(
 }
 
 /// Maps the result of a parser into a new value.
-pub fn map_result<'a, C, R, Rf>(
-    mut parser: impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
-    mut mapper: impl FnMut(R) -> Rf,
-) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<Rf> {
+pub fn map_result<'a, P, M, C, R, Rf>(
+    mut parser: P,
+    mut mapper: M,
+) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<Rf>
+where
+    P: FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
+    M: FnMut(R) -> Rf,
+{
     move |reader| {
         let result = parser(reader)?;
 
@@ -31,11 +35,31 @@ pub fn map_result<'a, C, R, Rf>(
     }
 }
 
+/// Maps the result of a parser into a new `ParserResult`.
+pub fn and_then<'a, P, M, C, R, Rf>(
+    mut parser: P,
+    mut mapper: M,
+) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<Rf>
+where
+    P: FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
+    M: FnMut(R) -> ParserResult<Rf>,
+{
+    not_found_restore(move |reader| {
+        let result = parser(reader)?;
+
+        mapper(result)
+    })
+}
+
 /// Applies a parser over the result of another one.
-pub fn map_parser<'a, C: Clone, R>(
-    mut origin: impl FnMut(&mut Reader<'a, C>) -> ParserResult<&'a str>,
-    mut parser: impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
-) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R> {
+pub fn map_parser<'a, O, P, C: Clone, R>(
+    mut origin: O,
+    mut parser: P,
+) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>
+where
+    O: FnMut(&mut Reader<'a, C>) -> ParserResult<&'a str>,
+    P: FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
+{
     not_found_restore(move |reader| {
         let result = origin(reader)?;
         let mut new_reader = Reader::new_with_context(result, reader.context().clone());
@@ -56,7 +80,7 @@ pub fn value<'a, C, R: Clone>(value: R) -> impl FnMut(&mut Reader<'a, C>) -> Par
 #[cfg(test)]
 mod test {
     use crate::parsers::characters::{
-        ascii_alpha_quantified, read_any, read_any_quantified, read_text,
+        ascii_alpha1, ascii_alpha_quantified, read_any, read_any_quantified, read_text,
     };
 
     use super::*;
@@ -81,11 +105,32 @@ mod test {
     #[test]
     fn test_map_result() {
         let mut reader = Reader::new("This is a test");
-        let mut parser = map_result(ascii_alpha_quantified(1..), |_| 32);
+        let mut parser = map_result(ascii_alpha1, |_| 32);
 
         let result = parser(&mut reader);
         assert_eq!(result, Ok(32));
 
+        let result = parser(&mut reader);
+        assert_eq!(result, Err(ParserResultError::NotFound));
+    }
+
+    #[test]
+    fn test_and_then() {
+        let mut reader = Reader::new("This is a test");
+        let mut parser = and_then(ascii_alpha1, |_| Ok(32));
+
+        let result = parser(&mut reader);
+        assert_eq!(result, Ok(32));
+
+        let result = parser(&mut reader);
+        assert_eq!(result, Err(ParserResultError::NotFound));
+
+        // Case when mapper fails.
+
+        let mut reader = Reader::new("This is a test");
+        let mut parser = and_then(ascii_alpha_quantified(1), |_| -> ParserResult<()> {
+            Err(ParserResultError::NotFound)
+        });
         let result = parser(&mut reader);
         assert_eq!(result, Err(ParserResultError::NotFound));
     }

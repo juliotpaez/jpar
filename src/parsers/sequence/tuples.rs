@@ -17,17 +17,22 @@ pub trait Tuple<'a, C, R> {
 }
 
 /// Applies a tuple of parsers one by one and returns their results as a tuple.
-pub fn tuple<'a, C, R>(
-    mut parsers: impl Tuple<'a, C, R>,
-) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R> {
+pub fn tuple<'a, P, C, R>(mut parsers: P) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>
+where
+    P: Tuple<'a, C, R>,
+{
     move |reader| parsers.parse(reader)
 }
 
 /// Applies a tuple of parsers one by one and returns their results as a tuple.
-pub fn tuple_separated<'a, C, R, RSep>(
-    mut parsers: impl Tuple<'a, C, R>,
-    mut separator: impl FnMut(&mut Reader<'a, C>) -> ParserResult<RSep>,
-) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R> {
+pub fn tuple_separated<'a, P, S, C, R, RSep>(
+    mut parsers: P,
+    mut separator: S,
+) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>
+where
+    P: Tuple<'a, C, R>,
+    S: FnMut(&mut Reader<'a, C>) -> ParserResult<RSep>,
+{
     move |reader| parsers.parse_separated(reader, |r| separator(r))
 }
 

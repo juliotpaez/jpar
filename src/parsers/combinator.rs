@@ -25,10 +25,14 @@ pub fn not_consume<'a, C, R>(
 }
 
 /// Returns the result of the child parser if it satisfies a verification function.
-pub fn verify<'a, C, R>(
-    mut parser: impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
-    mut verifier: impl FnMut(&R) -> bool,
-) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R> {
+pub fn verify<'a, C, R, P, V>(
+    mut parser: P,
+    mut verifier: V,
+) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>
+where
+    P: FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
+    V: FnMut(&R) -> bool,
+{
     not_found_restore(move |reader| {
         let result = parser(reader)?;
 
@@ -94,7 +98,7 @@ pub fn all_consumed<'a, C, R>(
 
 #[cfg(test)]
 mod test {
-    use crate::parsers::characters::ascii_alpha_quantified;
+    use crate::parsers::characters::ascii_alpha1;
     use crate::result::ParserError;
 
     use super::*;
@@ -113,7 +117,7 @@ mod test {
     #[test]
     fn test_not_consume() {
         let mut reader = Reader::new("This is a test");
-        let mut parser = not_consume(ascii_alpha_quantified(1..));
+        let mut parser = not_consume(ascii_alpha1);
 
         let result = parser(&mut reader);
         assert_eq!(result, Ok("This"));
@@ -123,7 +127,7 @@ mod test {
     #[test]
     fn test_verify() {
         let mut reader = Reader::new("This is a test");
-        let mut parser = verify(ascii_alpha_quantified(1..), |x| *x == "This");
+        let mut parser = verify(ascii_alpha1, |x| *x == "This");
 
         let result = parser(&mut reader);
         assert_eq!(result, Ok("This"));
@@ -158,7 +162,7 @@ mod test {
     #[test]
     fn test_optional() {
         let mut reader = Reader::new("This is a test");
-        let mut parser = optional(ascii_alpha_quantified(1..));
+        let mut parser = optional(ascii_alpha1);
 
         let result = parser(&mut reader);
         assert_eq!(result, Ok(Some("This")));
@@ -190,7 +194,7 @@ mod test {
     #[test]
     fn test_optional_default() {
         let mut reader = Reader::new("This is a test");
-        let mut parser = optional_default(ascii_alpha_quantified(1..));
+        let mut parser = optional_default(ascii_alpha1);
 
         let result = parser(&mut reader);
         assert_eq!(result, Ok("This"));
@@ -222,7 +226,7 @@ mod test {
     #[test]
     fn test_not() {
         let mut reader = Reader::new("This is a test");
-        let mut parser = not(ascii_alpha_quantified(1..));
+        let mut parser = not(ascii_alpha1);
 
         let result = parser(&mut reader);
         assert_eq!(result, Err(ParserResultError::NotFound));
@@ -255,7 +259,7 @@ mod test {
     #[test]
     fn test_all_consumed() {
         let mut reader = Reader::new("Test");
-        let mut parser = all_consumed(ascii_alpha_quantified(1..));
+        let mut parser = all_consumed(ascii_alpha1);
 
         let result = parser(&mut reader);
         assert_eq!(result, Ok("Test"));
