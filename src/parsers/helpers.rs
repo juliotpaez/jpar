@@ -31,6 +31,19 @@ pub fn map_result<'a, C, R, Rf>(
     }
 }
 
+/// Applies a parser over the result of another one.
+pub fn map_parser<'a, C: Clone, R>(
+    mut origin: impl FnMut(&mut Reader<'a, C>) -> ParserResult<&'a str>,
+    mut parser: impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
+) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R> {
+    not_found_restore(move |reader| {
+        let result = origin(reader)?;
+        let mut new_reader = Reader::new_with_context(result, reader.context().clone());
+
+        parser(&mut new_reader)
+    })
+}
+
 /// Always succeeds with given value without consuming any input.
 pub fn value<'a, C, R: Clone>(value: R) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R> {
     move |_| Ok(value.clone())
@@ -42,7 +55,9 @@ pub fn value<'a, C, R: Clone>(value: R) -> impl FnMut(&mut Reader<'a, C>) -> Par
 
 #[cfg(test)]
 mod test {
-    use crate::parsers::characters::{ascii_alpha_quantified, read_text};
+    use crate::parsers::characters::{
+        ascii_alpha_quantified, read_any, read_any_quantified, read_text,
+    };
 
     use super::*;
 
@@ -70,6 +85,21 @@ mod test {
 
         let result = parser(&mut reader);
         assert_eq!(result, Ok(32));
+
+        let result = parser(&mut reader);
+        assert_eq!(result, Err(ParserResultError::NotFound));
+    }
+
+    #[test]
+    fn test_map_parser() {
+        let mut reader = Reader::new("Test 123");
+        let mut parser = map_parser(read_any_quantified(3), read_any());
+
+        let result = parser(&mut reader);
+        assert_eq!(result, Ok('T'));
+
+        let result = parser(&mut reader);
+        assert_eq!(result, Ok('t'));
 
         let result = parser(&mut reader);
         assert_eq!(result, Err(ParserResultError::NotFound));
