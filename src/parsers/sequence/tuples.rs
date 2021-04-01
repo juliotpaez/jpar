@@ -25,7 +25,7 @@ where
 }
 
 /// Applies a tuple of parsers one by one and returns their results as a tuple.
-pub fn tuple_separated<'a, P, S, C, R, RSep>(
+pub fn separated_tuple<'a, P, S, C, R, RSep>(
     mut parsers: P,
     mut separator: S,
 ) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>
@@ -352,7 +352,7 @@ mod test {
             let mut value: Vec<_> = texts.iter().map(|t| read_text(t.as_str())).collect();
 
             let mut reader = Reader::new(input.as_str());
-            let mut parser = tuple_separated((value.remove(0),), read_text("|"));
+            let mut parser = separated_tuple((value.remove(0),), read_text("|"));
             let result = parser(&mut reader);
             assert_eq!(result, Ok((texts[0].as_str(),)), "Step: {}", i);
         }
@@ -370,7 +370,7 @@ mod test {
             let mut value: Vec<_> = texts.iter().map(|t| read_text(t.as_str())).collect();
 
             let mut reader = Reader::new(input.as_str());
-            let mut parser = tuple_separated((value.remove(0), value.remove(0)), read_text("|"));
+            let mut parser = separated_tuple((value.remove(0), value.remove(0)), read_text("|"));
             let result = parser(&mut reader);
             assert_eq!(
                 result,
@@ -393,7 +393,7 @@ mod test {
             let mut value: Vec<_> = texts.iter().map(|t| read_text(t.as_str())).collect();
 
             let mut reader = Reader::new(input.as_str());
-            let mut parser = tuple_separated(
+            let mut parser = separated_tuple(
                 (value.remove(0), value.remove(0), value.remove(0)),
                 read_text("|"),
             );
@@ -419,7 +419,7 @@ mod test {
             let mut value: Vec<_> = texts.iter().map(|t| read_text(t.as_str())).collect();
 
             let mut reader = Reader::new(input.as_str());
-            let mut parser = tuple_separated(
+            let mut parser = separated_tuple(
                 (
                     value.remove(0),
                     value.remove(0),
@@ -455,7 +455,7 @@ mod test {
             let mut value: Vec<_> = texts.iter().map(|t| read_text(t.as_str())).collect();
 
             let mut reader = Reader::new(input.as_str());
-            let mut parser = tuple_separated(
+            let mut parser = separated_tuple(
                 (
                     value.remove(0),
                     value.remove(0),
