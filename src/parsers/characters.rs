@@ -254,7 +254,7 @@ pub fn read_none_of_quantified<'a, C>(
 }
 
 /// Reads one character that are not inside `interval`.
-pub fn read_none_of<'a, 'b, C>(
+pub fn read_none_of<'a, C>(
     verifier: impl Fn(usize, char) -> bool,
 ) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<char> {
     map_result(read_none_of_quantified(1, verifier), |v| {

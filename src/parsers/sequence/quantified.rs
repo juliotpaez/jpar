@@ -63,10 +63,10 @@ pub fn repeat_to_fill<'a, C, R>(
     mut parser: impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
 ) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<()> {
     not_found_restore(move |reader| {
-        for i in 0..buffer.len() {
+        for item in buffer.iter_mut() {
             match parser(reader) {
                 Ok(v) => {
-                    buffer[i] = v;
+                    *item = v;
                 }
                 Err(e) => return Err(e),
             }

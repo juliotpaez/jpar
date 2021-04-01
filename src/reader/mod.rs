@@ -95,7 +95,7 @@ impl<'a, C> Reader<'a, C> {
     /// Returns an empty `Span` located at the current position.
     pub fn span_at_offset(&self) -> Span {
         let cursor = self.cursor.clone();
-        Span::new(self.content.clone(), cursor.clone(), cursor)
+        Span::new(self.content, cursor.clone(), cursor)
     }
 
     /// Whether the reader is placed at the end of the input or not.
