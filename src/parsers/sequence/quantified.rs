@@ -30,6 +30,46 @@ pub fn repeat<'a, C, R>(
     })
 }
 
+/// Alternates between two parsers to produce a list of elements.
+#[cfg(feature = "alloc")]
+pub fn repeat_separated<'a, C, R, RSep>(
+    quantifier: impl Into<Quantifier>,
+    mut parser: impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
+    mut separator: impl FnMut(&mut Reader<'a, C>) -> ParserResult<RSep>,
+) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<Vec<R>> {
+    let quantifier = quantifier.into();
+
+    not_found_restore(move |reader| {
+        let mut result = Vec::new();
+
+        while !quantifier.is_finished(result.len()) {
+            let init_loop_cursor = reader.save_cursor();
+            if result.len() > 0 {
+                match separator(reader) {
+                    Ok(_) => {}
+                    Err(ParserResultError::NotFound) => break,
+                    Err(e) => return Err(e),
+                }
+            }
+
+            result.push(match parser(reader) {
+                Ok(v) => v,
+                Err(ParserResultError::NotFound) => {
+                    reader.restore(init_loop_cursor);
+                    break;
+                }
+                Err(e) => return Err(e),
+            });
+        }
+
+        if quantifier.contains(result.len()) {
+            Ok(result)
+        } else {
+            Err(ParserResultError::NotFound)
+        }
+    })
+}
+
 /// Repeats a parser a quantified number of times and returns it.
 pub fn repeat_and_count<'a, C, R>(
     quantifier: impl Into<Quantifier>,
@@ -104,6 +144,24 @@ pub fn repeat_and_fold<'a, C, R: Clone, Rp>(
         } else {
             Err(ParserResultError::NotFound)
         }
+    })
+}
+
+/// Gets a number from the first parser, then applies the second parser that many times.
+#[cfg(feature = "alloc")]
+pub fn count_and_repeat<'a, C, R>(
+    mut repetitions: impl FnMut(&mut Reader<'a, C>) -> ParserResult<usize>,
+    mut parser: impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
+) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<Vec<R>> {
+    not_found_restore(move |reader| {
+        let repetitions = repetitions(reader)?;
+        let mut result = Vec::with_capacity(repetitions);
+
+        for _ in 0..repetitions {
+            result.push(parser(reader)?);
+        }
+
+        Ok(result)
     })
 }
 
@@ -199,7 +257,8 @@ mod test {
 #[cfg(test)]
 #[cfg(feature = "alloc")]
 mod test_alloc {
-    use crate::parsers::characters::ascii_alpha;
+    use crate::parsers::characters::{ascii_alpha, read_text};
+    use crate::parsers::helpers::value;
     use crate::result::ParserError;
 
     use super::*;
@@ -234,5 +293,40 @@ mod test_alloc {
                 cursor: reader.save_cursor(),
             }))
         );
+    }
+
+    #[test]
+    fn test_repeat_separated() {
+        let mut reader = Reader::new("T|e|s|t");
+        let mut parser = repeat_separated(3, ascii_alpha, read_text("|"));
+
+        let result = parser(&mut reader);
+        assert_eq!(result, Ok(vec!['T', 'e', 's']));
+        assert_eq!(reader.byte_offset(), 5);
+
+        let result = parser(&mut reader);
+        assert_eq!(result, Err(ParserResultError::NotFound));
+        assert_eq!(reader.byte_offset(), 5);
+
+        // Case failing because missing element.
+
+        let mut reader = Reader::new("T|e|");
+        let mut parser = repeat_separated(.., ascii_alpha, read_text("|"));
+
+        let result = parser(&mut reader);
+        assert_eq!(result, Ok(vec!['T', 'e']));
+        assert_eq!(reader.byte_offset(), 3);
+    }
+
+    #[test]
+    fn test_count_and_repeat() {
+        let mut reader = Reader::new("Test");
+        let mut parser = count_and_repeat(value(3), ascii_alpha);
+
+        let result = parser(&mut reader);
+        assert_eq!(result, Ok(vec!['T', 'e', 's']));
+
+        let result = parser(&mut reader);
+        assert_eq!(result, Err(ParserResultError::NotFound));
     }
 }
