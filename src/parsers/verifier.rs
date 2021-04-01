@@ -4,6 +4,10 @@ pub fn char_verifier(value: char) -> impl Fn(usize, char) -> bool {
     move |_, c| value == c
 }
 
+pub fn text_verifier<'a>(value: &'a str) -> impl Fn(usize, char) -> bool + 'a {
+    move |_, c| value.contains(c)
+}
+
 pub fn range_verifier(value: RangeInclusive<char>) -> impl Fn(usize, char) -> bool {
     move |_, c| value.contains(&c)
 }
