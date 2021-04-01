@@ -8,5 +8,29 @@ edition = "2018"
 bytecount = "0.6.2"
 memchr = "2.3.4"
 
+[dev-dependencies]
+criterion = "0.3.4"
+
 [features]
 alloc = []
+
+[profile.bench]
+debug = true
+lto = true
+codegen-units = 1
+
+[[test]]
+name = "arithmetic"
+
+[[test]]
+name = "json"
+
+[[bench]]
+name = "arithmetic"
+path = "benches/arithmetic.rs"
+harness = false
+
+[[bench]]
+name = "json"
+path = "benches/json.rs"
+harness = false
