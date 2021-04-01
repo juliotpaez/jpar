@@ -1,12 +1,10 @@
-use parfet::parsers::branch::alternative;
-use parfet::parsers::characters::{
-    decimal_digit1, read_any_of, read_char, ucd_single_line_whitespace0,
-};
-use parfet::parsers::helpers::map_result;
-use parfet::parsers::sequence::{delimited, repeat_and_fold, tuple};
-use parfet::parsers::verifiers::text_verifier;
-use parfet::result::ParserResult;
-use parfet::Reader;
+use jpar::branch::alternative;
+use jpar::characters::{decimal_digit1, read_any_of, read_char, ucd_single_line_whitespace0};
+use jpar::helpers::map_result;
+use jpar::sequence::{delimited, repeat_and_fold, tuple};
+use jpar::verifiers::text_verifier;
+use jpar::ParserResult;
+use jpar::Reader;
 
 // Parser definition
 

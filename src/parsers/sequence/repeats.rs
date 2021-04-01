@@ -5,12 +5,12 @@ use crate::Reader;
 
 /// Repeats a parser a quantified number of times.
 #[cfg(feature = "alloc")]
-pub fn repeat<'a, P, C, R>(
+pub fn repeat<'a, P, C, R, Err>(
     quantifier: impl Into<Quantifier>,
     mut parser: P,
-) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<Vec<R>>
+) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<Vec<R>, Err>
 where
-    P: FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
+    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
 {
     let quantifier = quantifier.into();
 
@@ -35,14 +35,14 @@ where
 
 /// Alternates between two parsers to produce a list of elements.
 #[cfg(feature = "alloc")]
-pub fn repeat_separated<'a, P, S, C, R, RSep>(
+pub fn repeat_separated<'a, P, S, C, R, RSep, Err>(
     quantifier: impl Into<Quantifier>,
     mut parser: P,
     mut separator: S,
-) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<Vec<R>>
+) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<Vec<R>, Err>
 where
-    P: FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
-    S: FnMut(&mut Reader<'a, C>) -> ParserResult<RSep>,
+    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
+    S: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RSep, Err>,
 {
     let quantifier = quantifier.into();
 
@@ -78,10 +78,10 @@ where
 }
 
 /// Repeats a parser a quantified number of times and returns it.
-pub fn repeat_and_count<'a, C, R>(
+pub fn repeat_and_count<'a, C, R, Err>(
     quantifier: impl Into<Quantifier>,
-    mut parser: impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
-) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<usize> {
+    mut parser: impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
+) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<usize, Err> {
     let quantifier = quantifier.into();
 
     not_found_restore(move |reader| {
@@ -105,10 +105,10 @@ pub fn repeat_and_count<'a, C, R>(
 }
 
 /// Repeats a parser to fill a slice.
-pub fn repeat_to_fill<'a, C, R>(
+pub fn repeat_to_fill<'a, C, R, Err>(
     buffer: &'a mut [R],
-    mut parser: impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
-) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<()> {
+    mut parser: impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
+) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<(), Err> {
     not_found_restore(move |reader| {
         for item in buffer.iter_mut() {
             match parser(reader) {
@@ -124,14 +124,14 @@ pub fn repeat_to_fill<'a, C, R>(
 }
 
 /// Applies a parser until it fails and accumulates the results using a given function and initial value.
-pub fn repeat_and_fold<'a, P, F, C, R: Clone, Rp>(
+pub fn repeat_and_fold<'a, P, F, C, R: Clone, Rp, Err>(
     quantifier: impl Into<Quantifier>,
     init: R,
     fold: F,
     mut parser: P,
-) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>
+) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>
 where
-    P: FnMut(&mut Reader<'a, C>) -> ParserResult<Rp>,
+    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<Rp, Err>,
     F: Fn(R, Rp) -> R,
 {
     let quantifier = quantifier.into();
@@ -160,13 +160,13 @@ where
 
 /// Gets a number from the first parser, then applies the second parser that many times.
 #[cfg(feature = "alloc")]
-pub fn count_and_repeat<'a, Rep, P, C, R>(
+pub fn count_and_repeat<'a, Rep, P, C, R, Err>(
     mut repetitions: Rep,
     mut parser: P,
-) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<Vec<R>>
+) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<Vec<R>, Err>
 where
-    Rep: FnMut(&mut Reader<'a, C>) -> ParserResult<usize>,
-    P: FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
+    Rep: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<usize, Err>,
+    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
 {
     not_found_restore(move |reader| {
         let repetitions = repetitions(reader)?;
@@ -187,7 +187,6 @@ where
 #[cfg(test)]
 mod test {
     use crate::parsers::characters::{ascii_alpha_quantified, read_any};
-    use crate::result::ParserError;
 
     use super::*;
 
@@ -201,26 +200,6 @@ mod test {
 
         let result = parser(&mut reader);
         assert_eq!(result, Err(ParserResultError::NotFound));
-    }
-
-    #[test]
-    fn test_repeat_and_count_error() {
-        let mut reader = Reader::new("This is a test");
-        let mut parser = repeat_and_count(.., |reader| -> ParserResult<()> {
-            Err(ParserResultError::Error(ParserError {
-                origin: "".into(),
-                cursor: reader.save_cursor(),
-            }))
-        });
-
-        let result = parser(&mut reader);
-        assert_eq!(
-            result,
-            Err(ParserResultError::Error(ParserError {
-                origin: "".into(),
-                cursor: reader.save_cursor(),
-            }))
-        );
     }
 
     #[test]
@@ -270,7 +249,6 @@ mod test {
 mod test_alloc {
     use crate::parsers::characters::{ascii_alpha, read_text};
     use crate::parsers::helpers::value;
-    use crate::result::ParserError;
 
     use super::*;
 
@@ -284,26 +262,6 @@ mod test_alloc {
 
         let result = parser(&mut reader);
         assert_eq!(result, Err(ParserResultError::NotFound));
-    }
-
-    #[test]
-    fn test_repeat_error() {
-        let mut reader = Reader::new("This is a test");
-        let mut parser = repeat(3, |reader| -> ParserResult<()> {
-            Err(ParserResultError::Error(ParserError {
-                origin: "".into(),
-                cursor: reader.save_cursor(),
-            }))
-        });
-
-        let result = parser(&mut reader);
-        assert_eq!(
-            result,
-            Err(ParserResultError::Error(ParserError {
-                origin: "".into(),
-                cursor: reader.save_cursor(),
-            }))
-        );
     }
 
     #[test]

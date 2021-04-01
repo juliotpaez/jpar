@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use bytecount::num_chars;
 
 pub use cursor::*;
@@ -10,34 +12,57 @@ mod span;
 
 /// A `String` reader that moves a cursor the reader updated.
 #[derive(Debug, Clone)]
-pub struct Reader<'a, C = ()> {
+pub struct Reader<'a, Err = (), C = ()> {
     content: &'a str,
     cursor: Cursor,
     context: C,
+    _error: PhantomData<Err>,
 }
 
 impl<'a> Reader<'a> {
     // CONSTRUCTORS -----------------------------------------------------------
 
     /// Create a new `Reader` with the specified `content`.
-    pub fn new(content: &'a str) -> Reader<'a, ()> {
+    pub fn new(content: &'a str) -> Reader<'a, (), ()> {
         Reader {
             content,
             cursor: Cursor::new(0, 0, 1, 1),
             context: (),
+            _error: PhantomData::default(),
         }
     }
-}
 
-impl<'a, C> Reader<'a, C> {
-    // CONSTRUCTORS -----------------------------------------------------------
+    /// Create a new `Reader` with the specified `content` and defining an error type.
+    pub fn new_with_error<Err>(content: &'a str) -> Reader<'a, Err, ()> {
+        Reader {
+            content,
+            cursor: Cursor::new(0, 0, 1, 1),
+            context: (),
+            _error: PhantomData::default(),
+        }
+    }
 
     /// Create a new `Reader` with the specified `content` and `context`.
-    pub fn new_with_context(content: &'a str, context: C) -> Reader<'a, C> {
+    pub fn new_with_context<C>(content: &'a str, context: C) -> Reader<'a, (), C> {
         Reader {
             content,
             cursor: Cursor::new(0, 0, 1, 1),
             context,
+            _error: PhantomData::default(),
+        }
+    }
+}
+
+impl<'a, C, Err> Reader<'a, Err, C> {
+    // CONSTRUCTORS -----------------------------------------------------------
+
+    /// Create a new `Reader` with the specified `content` and `context` and defining an error type.
+    pub fn new_with_context_and_error(content: &'a str, context: C) -> Reader<'a, Err, C> {
+        Reader {
+            content,
+            cursor: Cursor::new(0, 0, 1, 1),
+            context,
+            _error: PhantomData::default(),
         }
     }
 
@@ -109,7 +134,7 @@ impl<'a, C> Reader<'a, C> {
     /// # Example
     ///
     /// ```
-    /// # use parfet::Reader;
+    /// # use jpar::Reader;
     /// let mut reader = Reader::new("test");
     /// assert_eq!(reader.read(), Some('t'));
     /// assert_eq!(reader.read(), Some('e'));
@@ -132,7 +157,7 @@ impl<'a, C> Reader<'a, C> {
     /// # Example
     ///
     /// ```
-    /// # use parfet::Reader;
+    /// # use jpar::Reader;
     /// let mut reader = Reader::new("test");
     /// assert!(reader.read_text("te"));
     /// assert!(reader.read_text("st"));
@@ -152,7 +177,7 @@ impl<'a, C> Reader<'a, C> {
     /// # Example
     ///
     /// ```
-    /// # use parfet::Reader;
+    /// # use jpar::Reader;
     /// let mut reader = Reader::new("this test");
     ///
     /// let result = reader.read_quantified(4);
@@ -185,7 +210,7 @@ impl<'a, C> Reader<'a, C> {
     /// # Example
     ///
     /// ```
-    /// # use parfet::Reader;
+    /// # use jpar::Reader;
     /// let mut reader = Reader::new("this test");
     ///
     /// let result = reader.read_while(|i,c| ('a'..='z').contains(&c));
@@ -210,7 +235,7 @@ impl<'a, C> Reader<'a, C> {
     /// # Example
     ///
     /// ```
-    /// # use parfet::Reader;
+    /// # use jpar::Reader;
     /// let mut reader = Reader::new("this test");
     ///
     /// let result = reader.read_while_quantified(1..=4, |i,c| c != 'i');
@@ -241,7 +266,7 @@ impl<'a, C> Reader<'a, C> {
     /// # Example
     ///
     /// ```
-    /// # use parfet::Reader;
+    /// # use jpar::Reader;
     /// let mut reader = Reader::new("test");
     /// assert_eq!(reader.peek(), Some('t'));
     /// assert_eq!(reader.peek(), Some('t'));
@@ -264,7 +289,7 @@ impl<'a, C> Reader<'a, C> {
     /// # Example
     ///
     /// ```
-    /// # use parfet::Reader;
+    /// # use jpar::Reader;
     /// let mut reader = Reader::new("test");
     /// assert!(reader.peek_text("te"));
     /// assert!(reader.peek_text("test"));
@@ -282,7 +307,7 @@ impl<'a, C> Reader<'a, C> {
     /// # Example
     ///
     /// ```
-    /// # use parfet::Reader;
+    /// # use jpar::Reader;
     /// let mut reader = Reader::new("this test");
     /// assert_eq!(reader.byte_offset(), 0);
     ///
@@ -328,7 +353,7 @@ impl<'a, C> Reader<'a, C> {
     /// # Example
     ///
     /// ```
-    /// # use parfet::Reader;
+    /// # use jpar::Reader;
     /// let mut reader = Reader::new("this test");
     /// assert_eq!(reader.byte_offset(), 0);
     ///
@@ -370,7 +395,7 @@ impl<'a, C> Reader<'a, C> {
     /// # Example
     ///
     /// ```
-    /// # use parfet::Reader;
+    /// # use jpar::Reader;
     /// let mut reader = Reader::new("this test");
     /// assert_eq!(reader.byte_offset(), 0);
     ///
@@ -418,7 +443,7 @@ impl<'a, C> Reader<'a, C> {
     /// # Example
     ///
     /// ```
-    /// # use parfet::Reader;
+    /// # use jpar::Reader;
     /// let mut reader = Reader::new("this test");
     ///
     /// assert_eq!(reader.read(), Some('t'));
@@ -452,7 +477,7 @@ impl<'a, C> Reader<'a, C> {
     /// # Example
     ///
     /// ```
-    /// # use parfet::Reader;
+    /// # use jpar::Reader;
     /// let mut reader = Reader::new("this test");
     /// assert_eq!(reader.read(), Some('t'));
     /// assert_eq!(reader.read(), Some('h'));
@@ -476,7 +501,7 @@ impl<'a, C> Reader<'a, C> {
     /// # Example
     ///
     /// ```
-    /// # use parfet::Reader;
+    /// # use jpar::Reader;
     /// let mut reader = Reader::new("this test");
     ///
     /// assert_eq!(reader.read(), Some('t'));
@@ -498,7 +523,7 @@ impl<'a, C> Reader<'a, C> {
     /// # Example
     ///
     /// ```
-    /// # use parfet::Reader;
+    /// # use jpar::Reader;
     /// let mut reader = Reader::new("this test");
     /// let cursor = reader.save_cursor();
     ///

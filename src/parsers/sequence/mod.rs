@@ -11,15 +11,15 @@ mod tuples;
 /// Matches an object from the first parser and discards it,
 /// then gets an object from the second parser, and finally
 /// matches an object from the third parser and discards it.
-pub fn delimited<'a, Pre, Con, Pos, C, RPre, R, RPos>(
+pub fn delimited<'a, Pre, Con, Pos, C, RPre, R, RPos, Err>(
     mut prefix: Pre,
     mut content: Con,
     mut postfix: Pos,
-) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>
+) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>
 where
-    Pre: FnMut(&mut Reader<'a, C>) -> ParserResult<RPre>,
-    Con: FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
-    Pos: FnMut(&mut Reader<'a, C>) -> ParserResult<RPos>,
+    Pre: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RPre, Err>,
+    Con: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
+    Pos: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RPos, Err>,
 {
     not_found_restore(move |reader| {
         let _ = prefix(reader)?;
@@ -31,13 +31,13 @@ where
 }
 
 /// Matches an object from the first parser and discards it, then gets an object from the second parser.
-pub fn preceded<'a, Pre, Con, C, RPre, R>(
+pub fn preceded<'a, Pre, Con, C, RPre, R, Err>(
     mut prefix: Pre,
     mut content: Con,
-) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>
+) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>
 where
-    Pre: FnMut(&mut Reader<'a, C>) -> ParserResult<RPre>,
-    Con: FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
+    Pre: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RPre, Err>,
+    Con: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
 {
     not_found_restore(move |reader| {
         let _ = prefix(reader)?;
@@ -46,13 +46,13 @@ where
 }
 
 /// Gets an object from the first parser, then matches an object from the second parser and discards it.
-pub fn terminated<'a, Con, Pos, C, R, RPos>(
+pub fn terminated<'a, Con, Pos, C, R, RPos, Err>(
     mut content: Con,
     mut postfix: Pos,
-) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>
+) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>
 where
-    Con: FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
-    Pos: FnMut(&mut Reader<'a, C>) -> ParserResult<RPos>,
+    Con: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
+    Pos: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RPos, Err>,
 {
     not_found_restore(move |reader| {
         let result = content(reader)?;

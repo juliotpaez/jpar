@@ -79,7 +79,7 @@ impl<'a> Span<'a> {
     /// # Example
     ///
     /// ```
-    /// # use parfet::Reader;
+    /// # use jpar::Reader;
     /// let mut reader = Reader::new("This\nis\nthe\nfragment");
     ///
     /// // ... prepare the span to contain: "his\nis\nt" ...

@@ -5,19 +5,17 @@ use std::collections::HashMap;
 
 use criterion::Criterion;
 
-use parfet::parsers::branch::alternative;
-use parfet::parsers::characters::{
+use jpar::branch::alternative;
+use jpar::characters::{
     read_any, read_any_quantified, read_char, read_none_of, read_text, ucd_whitespace0,
 };
-use parfet::parsers::combinator::verify;
-use parfet::parsers::helpers::{and_then, map_result};
-use parfet::parsers::numbers::read_float;
-use parfet::parsers::sequence::{
-    delimited, preceded, repeat_and_fold, repeat_separated, separated_tuple,
-};
-use parfet::parsers::verifiers::text_verifier;
-use parfet::result::{ParserResult, ParserResultError};
-use parfet::Reader;
+use jpar::combinator::verify;
+use jpar::helpers::{and_then, map_result};
+use jpar::numbers::{read_float, read_integer};
+use jpar::sequence::{delimited, preceded, repeat_and_fold, repeat_separated, separated_tuple};
+use jpar::verifiers::text_verifier;
+use jpar::Reader;
+use jpar::{ParserResult, ParserResultError};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum JsonValue {
@@ -29,20 +27,20 @@ pub enum JsonValue {
     Object(HashMap<String, JsonValue>),
 }
 
-fn boolean(input: &mut Reader) -> ParserResult<bool> {
+fn boolean<Err>(input: &mut Reader<Err>) -> ParserResult<bool, Err> {
     alternative((
         map_result(read_text("false"), |_| false),
         map_result(read_text("true"), |_| true),
     ))(input)
 }
 
-fn u16_hex(input: &mut Reader) -> ParserResult<u16> {
+fn u16_hex<Err>(input: &mut Reader<Err>) -> ParserResult<u16, Err> {
     map_result(read_any_quantified(4), |s| {
         u16::from_str_radix(s, 16).unwrap()
     })(input)
 }
 
-fn unicode_escape(input: &mut Reader) -> ParserResult<char> {
+fn unicode_escape<Err>(input: &mut Reader<Err>) -> ParserResult<char, Err> {
     map_result(
         alternative((
             // Not a surrogate
@@ -66,7 +64,7 @@ fn unicode_escape(input: &mut Reader) -> ParserResult<char> {
     )(input)
 }
 
-fn character(input: &mut Reader) -> ParserResult<char> {
+fn character<Err>(input: &mut Reader<Err>) -> ParserResult<char, Err> {
     let c = read_none_of(text_verifier("\""))(input)?;
     if c == '\\' {
         alternative((
@@ -88,7 +86,7 @@ fn character(input: &mut Reader) -> ParserResult<char> {
     }
 }
 
-fn string(input: &mut Reader) -> ParserResult<String> {
+fn string<Err>(input: &mut Reader<Err>) -> ParserResult<String, Err> {
     delimited(
         read_char('"'),
         repeat_and_fold(
@@ -104,14 +102,14 @@ fn string(input: &mut Reader) -> ParserResult<String> {
     )(input)
 }
 
-fn ws<'a, P, C, R>(content: P) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>
+fn ws<'a, P, C, R, Err>(content: P) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>
 where
-    P: FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
+    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
 {
     delimited(ucd_whitespace0, content, ucd_whitespace0)
 }
 
-fn array(input: &mut Reader) -> ParserResult<Vec<JsonValue>> {
+fn array<Err: From<&'static str>>(input: &mut Reader<Err>) -> ParserResult<Vec<JsonValue>, Err> {
     delimited(
         read_char('['),
         ws(repeat_separated(.., json_value, ws(read_char(',')))),
@@ -119,7 +117,9 @@ fn array(input: &mut Reader) -> ParserResult<Vec<JsonValue>> {
     )(input)
 }
 
-fn object(input: &mut Reader) -> ParserResult<HashMap<String, JsonValue>> {
+fn object<Err: From<&'static str>>(
+    input: &mut Reader<Err>,
+) -> ParserResult<HashMap<String, JsonValue>, Err> {
     map_result(
         delimited(
             read_char('{'),
@@ -134,7 +134,7 @@ fn object(input: &mut Reader) -> ParserResult<HashMap<String, JsonValue>> {
     )(input)
 }
 
-fn json_value(input: &mut Reader) -> ParserResult<JsonValue> {
+fn json_value<Err: From<&'static str>>(input: &mut Reader<Err>) -> ParserResult<JsonValue, Err> {
     use JsonValue::*;
 
     alternative((
@@ -150,7 +150,7 @@ fn json_value(input: &mut Reader) -> ParserResult<JsonValue> {
     ))(input)
 }
 
-fn json(input: &mut Reader) -> ParserResult<JsonValue> {
+fn json<Err: From<&'static str>>(input: &mut Reader<Err>) -> ParserResult<JsonValue, Err> {
     ws(json_value)(input)
 }
 
@@ -163,7 +163,7 @@ fn json_bench(c: &mut Criterion) {
 
     c.bench_function("json", |b| {
         b.iter(|| {
-            let mut reader = Reader::new(data);
+            let mut reader = Reader::new_with_error::<&str>(data);
             json(&mut reader).unwrap()
         });
     });
@@ -172,8 +172,8 @@ fn json_bench(c: &mut Criterion) {
 fn read_integer_bench(c: &mut Criterion) {
     c.bench_function("read_integer", |b| {
         b.iter(|| {
-            let mut reader = Reader::new("-1.234E-12");
-            read_float(&mut reader).unwrap()
+            let mut reader = Reader::new("-1563718");
+            read_integer(&mut reader).unwrap()
         });
     });
 }
@@ -181,7 +181,7 @@ fn read_integer_bench(c: &mut Criterion) {
 fn read_float_bench(c: &mut Criterion) {
     c.bench_function("read_float", |b| {
         b.iter(|| {
-            let mut reader = Reader::new("-1.234E-12");
+            let mut reader = Reader::new_with_error::<&str>("-1.234E-12");
             read_float(&mut reader).unwrap()
         });
     });
