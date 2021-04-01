@@ -436,7 +436,7 @@ impl<'a, C> Reader<'a, C> {
     /// assert_eq!(reader.substring(&from, &to).content(), "is tes");
     /// assert_eq!(reader.substring(&to, &from).content(), "is tes");
     /// ```
-    pub fn substring(&self, from: &Cursor, to: &Cursor) -> Span {
+    pub fn substring(&self, from: &Cursor, to: &Cursor) -> Span<'a> {
         let (from, to) = if from.byte_offset() <= to.byte_offset() {
             (from, to)
         } else {
@@ -467,7 +467,7 @@ impl<'a, C> Reader<'a, C> {
     ///
     /// assert_eq!(reader.substring_to_current(&from).content(), "is tes");
     /// ```
-    pub fn substring_to_current(&self, cursor: &Cursor) -> Span {
+    pub fn substring_to_current(&self, cursor: &Cursor) -> Span<'a> {
         self.substring(&self.cursor, cursor)
     }
 
