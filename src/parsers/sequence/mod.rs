@@ -1,11 +1,11 @@
-pub use quantified::*;
+pub use repeat::*;
 pub use tuple::*;
 
 use crate::parsers::helpers::not_found_restore;
 use crate::result::ParserResult;
 use crate::Reader;
 
-mod quantified;
+mod repeat;
 mod tuple;
 
 /// Matches an object from the first parser and discards it,

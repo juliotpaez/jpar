@@ -14,7 +14,7 @@ mod span;
 pub struct Reader<'a, C = ()> {
     content: &'a str,
     cursor: Cursor,
-    context: Option<C>,
+    context: C,
 }
 
 impl<'a> Reader<'a> {
@@ -25,7 +25,7 @@ impl<'a> Reader<'a> {
         Reader {
             content,
             cursor: Cursor::new(0, 0, 1, 1),
-            context: None,
+            context: (),
         }
     }
 }
@@ -38,14 +38,14 @@ impl<'a, C> Reader<'a, C> {
         Reader {
             content,
             cursor: Cursor::new(0, 0, 1, 1),
-            context: Some(context),
+            context: context,
         }
     }
 
     // GETTERS ----------------------------------------------------------------
 
     /// The associated context of the `Reader` if there's any.
-    pub fn context(&self) -> &Option<C> {
+    pub fn context(&self) -> &C {
         &self.context
     }
 
