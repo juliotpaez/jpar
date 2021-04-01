@@ -1,9 +1,11 @@
+pub use quantified::*;
 pub use tuple::*;
 
 use crate::parsers::helpers::not_found_restore;
-use crate::result::{ParserResult, ParserResultError};
+use crate::result::ParserResult;
 use crate::Reader;
 
+mod quantified;
 mod tuple;
 
 /// Matches an object from the first parser and discards it,
@@ -54,6 +56,7 @@ pub fn terminated<'a, C, R, RPos>(
 #[cfg(test)]
 mod test {
     use crate::parsers::characters::{ascii_alpha_quantified, read_text};
+    use crate::result::ParserResultError;
 
     use super::*;
 
