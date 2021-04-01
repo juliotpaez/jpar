@@ -1,3 +1,4 @@
+use crate::parsers::helpers::not_found_restore;
 use crate::parsers::Quantifier;
 use crate::result::{ParserResult, ParserResultError};
 use crate::Reader;
@@ -41,17 +42,15 @@ pub fn verify<'a, C, R>(
     mut parser: impl FnMut(&mut Reader<'a, C>) -> ParserResult<R>,
     mut verifier: impl FnMut(&R) -> bool,
 ) -> impl FnMut(&mut Reader<'a, C>) -> ParserResult<R> {
-    move |reader| {
-        let init_cursor = reader.save_cursor();
+    not_found_restore(move |reader| {
         let result = parser(reader)?;
 
         if verifier(&result) {
             Ok(result)
         } else {
-            reader.restore(init_cursor);
             Err(ParserResultError::NotFound)
         }
-    }
+    })
 }
 
 /// Returns the provided value if the child parser succeeds.
