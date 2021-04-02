@@ -267,6 +267,16 @@ pub fn read_any<C, Err>(reader: &mut Reader<Err, C>) -> ParserResult<char, Err> 
     map_result(read_any_quantified(1), |v| v.chars().next().unwrap())(reader)
 }
 
+/// Reads zero or more character.
+pub fn read_any0<'a, C, Err>(reader: &mut Reader<'a, Err, C>) -> ParserResult<&'a str, Err> {
+    read_any_quantified(0..)(reader)
+}
+
+/// Reads one or more characters.
+pub fn read_any1<'a, C, Err>(reader: &mut Reader<'a, Err, C>) -> ParserResult<&'a str, Err> {
+    read_any_quantified(1..)(reader)
+}
+
 /// Reads one character that is inside `interval` a quantified number of times.
 pub fn read_any_of_quantified<'a, C, Err>(
     quantifier: impl Into<Quantifier>,
@@ -288,6 +298,20 @@ pub fn read_any_of<'a, C, Err>(
     })
 }
 
+/// Reads zero or more characters that are inside `interval`.
+pub fn read_any_of0<'a, C, Err>(
+    verifier: impl Fn(usize, char) -> bool,
+) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<&'a str, Err> {
+    read_any_of_quantified(0.., verifier)
+}
+
+/// Reads one or more characters that are inside `interval`.
+pub fn read_any_of1<'a, C, Err>(
+    verifier: impl Fn(usize, char) -> bool,
+) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<&'a str, Err> {
+    read_any_of_quantified(1.., verifier)
+}
+
 /// Reads one character that is not inside `interval` a quantified number of times.
 pub fn read_none_of_quantified<'a, C, Err>(
     quantifier: impl Into<Quantifier>,
@@ -300,13 +324,27 @@ pub fn read_none_of_quantified<'a, C, Err>(
     }
 }
 
-/// Reads one character that are not inside `interval`.
+/// Reads one character that is not inside `interval`.
 pub fn read_none_of<'a, C, Err>(
     verifier: impl Fn(usize, char) -> bool,
 ) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<char, Err> {
     map_result(read_none_of_quantified(1, verifier), |v| {
         v.chars().next().unwrap()
     })
+}
+
+/// Reads zero or more characters that are not inside `interval`.
+pub fn read_none_of0<'a, C, Err>(
+    verifier: impl Fn(usize, char) -> bool,
+) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<&'a str, Err> {
+    read_none_of_quantified(0.., verifier)
+}
+
+/// Reads one or more characters that are not inside `interval`.
+pub fn read_none_of1<'a, C, Err>(
+    verifier: impl Fn(usize, char) -> bool,
+) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<&'a str, Err> {
+    read_none_of_quantified(1.., verifier)
 }
 
 // ----------------------------------------------------------------------------
