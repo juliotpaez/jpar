@@ -2,9 +2,12 @@ use crate::result::{ParserResult, ParserResultError};
 use crate::{Cursor, Reader};
 
 /// Restores the reader when a not found error is returned.
-pub fn not_found_restore<'a, C, R, Err>(
-    mut parser: impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err> {
+pub fn not_found_restore<'a, P, C, R, Err>(
+    mut parser: P,
+) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>
+where
+    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
+{
     move |reader| {
         let init_cursor = reader.save_cursor();
 
@@ -26,12 +29,12 @@ pub fn map_result<'a, P, M, C, R, Rf, Err>(
 ) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<Rf, Err>
 where
     P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
-    M: FnMut(R) -> Rf,
+    M: FnMut(&mut Reader<'a, Err, C>, R) -> Rf,
 {
     move |reader| {
         let result = parser(reader)?;
 
-        Ok(mapper(result))
+        Ok(mapper(reader, result))
     }
 }
 
@@ -42,12 +45,12 @@ pub fn and_then<'a, P, M, C, R, Rf, Err>(
 ) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<Rf, Err>
 where
     P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
-    M: FnMut(R) -> ParserResult<Rf, Err>,
+    M: FnMut(&mut Reader<'a, Err, C>, R) -> ParserResult<Rf, Err>,
 {
     not_found_restore(move |reader| {
         let result = parser(reader)?;
 
-        mapper(result)
+        mapper(reader, result)
     })
 }
 
@@ -205,7 +208,7 @@ mod test {
     #[test]
     fn test_map_result() {
         let mut reader = Reader::new("This is a test");
-        let mut parser = map_result(ascii_alpha1, |_| 32);
+        let mut parser = map_result(ascii_alpha1, |_, _| 32);
 
         let result = parser(&mut reader);
         assert_eq!(result, Ok(32));
@@ -217,7 +220,7 @@ mod test {
     #[test]
     fn test_and_then() {
         let mut reader = Reader::new("This is a test");
-        let mut parser = and_then(ascii_alpha1, |_| Ok(32));
+        let mut parser = and_then(ascii_alpha1, |_, _| Ok(32));
 
         let result = parser(&mut reader);
         assert_eq!(result, Ok(32));
@@ -228,7 +231,7 @@ mod test {
         // Case when mapper fails.
 
         let mut reader = Reader::new("This is a test");
-        let mut parser = and_then(ascii_alpha_quantified(1), |_| -> ParserResult<(), ()> {
+        let mut parser = and_then(ascii_alpha_quantified(1), |_, _| -> ParserResult<(), ()> {
             Err(ParserResultError::NotFound)
         });
         let result = parser(&mut reader);

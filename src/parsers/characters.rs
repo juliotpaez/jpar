@@ -264,7 +264,7 @@ pub fn read_any_quantified<'a, C, Err>(
 
 /// Reads one character.
 pub fn read_any<C, Err>(reader: &mut Reader<Err, C>) -> ParserResult<char, Err> {
-    map_result(read_any_quantified(1), |v| v.chars().next().unwrap())(reader)
+    map_result(read_any_quantified(1), |_, v| v.chars().next().unwrap())(reader)
 }
 
 /// Reads zero or more character.
@@ -293,7 +293,7 @@ pub fn read_any_of_quantified<'a, C, Err>(
 pub fn read_any_of<'a, C, Err>(
     verifier: impl Fn(usize, char) -> bool,
 ) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<char, Err> {
-    map_result(read_any_of_quantified(1, verifier), |v| {
+    map_result(read_any_of_quantified(1, verifier), |_, v| {
         v.chars().next().unwrap()
     })
 }
@@ -328,7 +328,7 @@ pub fn read_none_of_quantified<'a, C, Err>(
 pub fn read_none_of<'a, C, Err>(
     verifier: impl Fn(usize, char) -> bool,
 ) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<char, Err> {
-    map_result(read_none_of_quantified(1, verifier), |v| {
+    map_result(read_none_of_quantified(1, verifier), |_, v| {
         v.chars().next().unwrap()
     })
 }

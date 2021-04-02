@@ -12,9 +12,12 @@ pub fn end<C, Err>(reader: &mut Reader<Err, C>) -> ParserResult<(), Err> {
 }
 
 /// Executes the parser and returns its value not consuming any character in the process.
-pub fn not_consume<'a, C, R, Err>(
-    mut parser: impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err> {
+pub fn not_consume<'a, P, C, R, Err>(
+    mut parser: P,
+) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>
+where
+    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
+{
     move |reader| {
         let init_cursor = reader.save_cursor();
         let result = parser(reader)?;
@@ -31,12 +34,12 @@ pub fn verify<'a, C, R, P, V, Err>(
 ) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>
 where
     P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
-    V: FnMut(&R) -> bool,
+    V: FnMut(&mut Reader<'a, Err, C>, &R) -> bool,
 {
     not_found_restore(move |reader| {
         let result = parser(reader)?;
 
-        if verifier(&result) {
+        if verifier(reader, &result) {
             Ok(result)
         } else {
             Err(ParserResultError::NotFound)
@@ -45,9 +48,12 @@ where
 }
 
 /// Returns None when the the parser is not found.
-pub fn optional<'a, C, R, Err>(
-    mut parser: impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<Option<R>, Err> {
+pub fn optional<'a, P, C, R, Err>(
+    mut parser: P,
+) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<Option<R>, Err>
+where
+    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
+{
     move |reader| match parser(reader) {
         Ok(v) => Ok(Some(v)),
         Err(ParserResultError::NotFound) => Ok(None),
@@ -56,9 +62,12 @@ pub fn optional<'a, C, R, Err>(
 }
 
 /// Returns the default value of `R` when the the parser is not found.
-pub fn optional_default<'a, C, R: Default, Err>(
-    mut parser: impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err> {
+pub fn optional_default<'a, P, C, R: Default, Err>(
+    mut parser: P,
+) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>
+where
+    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
+{
     move |reader| match parser(reader) {
         Ok(v) => Ok(v),
         Err(ParserResultError::NotFound) => Ok(R::default()),
@@ -67,9 +76,12 @@ pub fn optional_default<'a, C, R: Default, Err>(
 }
 
 /// Returns the default value of `R` when the the parser is not found.
-pub fn not<'a, C, R, Err>(
-    mut parser: impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<(), Err> {
+pub fn not<'a, P, C, R, Err>(
+    mut parser: P,
+) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<(), Err>
+where
+    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
+{
     move |reader| match parser(reader) {
         Ok(_) => Err(ParserResultError::NotFound),
         Err(ParserResultError::NotFound) => Ok(()),
@@ -78,9 +90,12 @@ pub fn not<'a, C, R, Err>(
 }
 
 /// Succeeds if all the input has been consumed by its child parser.
-pub fn all_consumed<'a, C, R, Err>(
-    mut parser: impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err> {
+pub fn all_consumed<'a, P, C, R, Err>(
+    mut parser: P,
+) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>
+where
+    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
+{
     move |reader| {
         let result = parser(reader)?;
 
@@ -126,7 +141,7 @@ mod test {
     #[test]
     fn test_verify() {
         let mut reader = Reader::new("This is a test");
-        let mut parser = verify(ascii_alpha1, |x| *x == "This");
+        let mut parser = verify(ascii_alpha1, |_, x| *x == "This");
 
         let result = parser(&mut reader);
         assert_eq!(result, Ok("This"));

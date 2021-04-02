@@ -15,7 +15,7 @@ fn factor(input: &mut Reader) -> ParserResult<i64> {
     delimited(
         ucd_single_line_whitespace0,
         alternative((
-            map_result(decimal_digit1, |digits| {
+            map_result(decimal_digit1, |_, digits| {
                 unsafe { std::str::from_utf8_unchecked(digits.as_bytes()) }
                     .parse()
                     .unwrap()

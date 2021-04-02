@@ -56,7 +56,7 @@ where
         ..,
         map_result(
             crate::parsers::sequence::tuple((condition, then)),
-            |(_, v)| v,
+            |_, (_, v)| v,
         ),
     )
 }

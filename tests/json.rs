@@ -24,13 +24,13 @@ pub enum JsonValue {
 
 fn boolean<Err>(input: &mut Reader<Err>) -> ParserResult<bool, Err> {
     alternative((
-        map_result(read_text("false"), |_| false),
-        map_result(read_text("true"), |_| true),
+        map_result(read_text("false"), |_, _| false),
+        map_result(read_text("true"), |_, _| true),
     ))(input)
 }
 
 fn u16_hex<Err>(input: &mut Reader<Err>) -> ParserResult<u16, Err> {
-    map_result(read_any_quantified(4), |s| {
+    map_result(read_any_quantified(4), |_, s| {
         u16::from_str_radix(s, 16).unwrap()
     })(input)
 }
@@ -39,23 +39,26 @@ fn unicode_escape<Err>(input: &mut Reader<Err>) -> ParserResult<char, Err> {
     map_result(
         alternative((
             // Not a surrogate
-            map_result(verify(u16_hex, |cp| !(0xD800..0xE000).contains(cp)), |cp| {
-                cp as u32
-            }),
+            map_result(
+                verify(u16_hex, |_, cp| !(0xD800..0xE000).contains(cp)),
+                |_, cp| cp as u32,
+            ),
             // See https://en.wikipedia.org/wiki/UTF-16#Code_points_from_U+010000_to_U+10FFFF for details
             map_result(
                 verify(
                     separated_tuple((u16_hex, u16_hex), read_text("\\u")),
-                    |(high, low)| (0xD800..0xDC00).contains(high) && (0xDC00..0xE000).contains(low),
+                    |_, (high, low)| {
+                        (0xD800..0xDC00).contains(high) && (0xDC00..0xE000).contains(low)
+                    },
                 ),
-                |(high, low)| {
+                |_, (high, low)| {
                     let high_ten = (high as u32) - 0xD800;
                     let low_ten = (low as u32) - 0xDC00;
                     (high_ten << 10) + low_ten + 0x10000
                 },
             ),
         )),
-        |x| std::char::from_u32(x).unwrap(),
+        |_, x| std::char::from_u32(x).unwrap(),
     )(input)
 }
 
@@ -63,7 +66,7 @@ fn character<Err>(input: &mut Reader<Err>) -> ParserResult<char, Err> {
     let c = read_none_of(text_verifier("\""))(input)?;
     if c == '\\' {
         alternative((
-            and_then(read_any, |c| {
+            and_then(read_any, |_, c| {
                 Ok(match c {
                     '"' | '\\' | '/' => c,
                     'b' => '\x08',
@@ -125,7 +128,7 @@ fn object<Err: From<&'static str>>(
             )),
             read_char('}'),
         ),
-        |key_values| key_values.into_iter().collect(),
+        |_, key_values| key_values.into_iter().collect(),
     )(input)
 }
 
@@ -133,15 +136,15 @@ fn json_value<Err: From<&'static str>>(input: &mut Reader<Err>) -> ParserResult<
     use JsonValue::*;
 
     alternative((
-        map_result(read_text("null"), |_| Null),
-        map_result(boolean, Bool),
-        map_result(string, Str),
-        map_result(read_float, |s| {
+        map_result(read_text("null"), |_, _| Null),
+        map_result(boolean, |_, v| Bool(v)),
+        map_result(string, |_, v| Str(v)),
+        map_result(read_float, |_, s| {
             let double = s.parse().unwrap();
             Num(double)
         }),
-        map_result(array, Array),
-        map_result(object, Object),
+        map_result(array, |_, v| Array(v)),
+        map_result(object, |_, v| Object(v)),
     ))(input)
 }
 
