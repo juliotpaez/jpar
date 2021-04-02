@@ -9,3 +9,15 @@ pub enum ParserResultError<Err> {
     NotFound,
     Error((Cursor, Err)),
 }
+
+impl<Err> ParserResultError<Err> {
+    // GETTERS ----------------------------------------------------------------
+
+    pub fn is_not_found(&self) -> bool {
+        matches!(self, ParserResultError::NotFound)
+    }
+
+    pub fn is_error(&self) -> bool {
+        matches!(self, ParserResultError::Error(_))
+    }
+}
