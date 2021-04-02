@@ -120,6 +120,22 @@ pub fn error<'a, C, R, Err: Clone>(
     }
 }
 
+/// Always fails with the given error without consuming any input.
+/// The error is built dynamically.
+pub fn error_dyn<'a, C, R, Err, EFn>(
+    mut error_fn: EFn,
+) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>
+where
+    EFn: FnMut(&mut Reader<'a, Err, C>) -> Err,
+{
+    move |reader| {
+        Err(ParserResultError::Error((
+            reader.save_cursor(),
+            error_fn(reader),
+        )))
+    }
+}
+
 /// Ensures that `parser` always success or returns an error.
 pub fn ensure<'a, P, C, R, Efn, Err>(
     mut parser: P,
@@ -266,14 +282,29 @@ mod test {
 
     #[test]
     fn test_error() {
-        let mut reader = Reader::new_with_error::<&str>("This is a test");
-        let mut parser = error::<_, (), _>("test");
+        let mut reader = Reader::new_with_error("This is a test");
+        let mut parser = error("test");
 
-        let result = parser(&mut reader);
+        let result: ParserResult<(), &str> = parser(&mut reader);
 
         match result {
             Err(ParserResultError::Error((_, e))) => {
                 assert_eq!(e, "test")
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn test_error_dyn() {
+        let mut reader = Reader::new_with_error("This is a test");
+        let mut parser = error_dyn(|r| format!("test at {}", r.save_cursor().char_offset()));
+
+        let result: ParserResult<(), String> = parser(&mut reader);
+
+        match result {
+            Err(ParserResultError::Error((_, e))) => {
+                assert_eq!(e.as_str(), "test at 0")
             }
             _ => unreachable!(),
         }
