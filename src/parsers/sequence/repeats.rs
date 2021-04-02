@@ -77,7 +77,7 @@ where
     })
 }
 
-/// Repeats a parser a quantified number of times and returns it.
+/// Repeats a parser a quantified number of times and returns the number of repetitions.
 pub fn repeat_and_count<'a, C, R, Err>(
     quantifier: impl Into<Quantifier>,
     mut parser: impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
@@ -94,6 +94,50 @@ pub fn repeat_and_count<'a, C, R, Err>(
             }
 
             result += 1;
+        }
+
+        if quantifier.contains(result) {
+            Ok(result)
+        } else {
+            Err(ParserResultError::NotFound)
+        }
+    })
+}
+
+/// Alternates between two parsers and returns the number of repetitions.
+pub fn repeat_and_count_separated<'a, P, S, C, R, RSep, Err>(
+    quantifier: impl Into<Quantifier>,
+    mut parser: P,
+    mut separator: S,
+) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<usize, Err>
+where
+    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
+    S: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RSep, Err>,
+{
+    let quantifier = quantifier.into();
+
+    not_found_restore(move |reader| {
+        let mut result = 0;
+        while !quantifier.is_finished(result) {
+            let init_loop_cursor = reader.save_cursor();
+            if result > 0 {
+                match separator(reader) {
+                    Ok(_) => {}
+                    Err(ParserResultError::NotFound) => break,
+                    Err(e) => return Err(e),
+                }
+            }
+
+            match parser(reader) {
+                Ok(_) => {
+                    result += 1;
+                }
+                Err(ParserResultError::NotFound) => {
+                    reader.restore(init_loop_cursor);
+                    break;
+                }
+                Err(e) => return Err(e),
+            };
         }
 
         if quantifier.contains(result) {
@@ -186,20 +230,44 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::parsers::characters::{ascii_alpha_quantified, read_any};
+    use crate::characters::{ascii_alpha, read_text};
+    use crate::parsers::characters::read_any;
 
     use super::*;
 
     #[test]
     fn test_repeat_and_count() {
-        let mut reader = Reader::new("Test");
-        let mut parser = repeat_and_count(1.., ascii_alpha_quantified(1));
+        let mut reader = Reader::new("Test ");
+        let mut parser = repeat_and_count(1.., ascii_alpha);
 
         let result = parser(&mut reader);
         assert_eq!(result, Ok(4));
 
         let result = parser(&mut reader);
         assert_eq!(result, Err(ParserResultError::NotFound));
+    }
+
+    #[test]
+    fn test_repeat_and_count_separated() {
+        let mut reader = Reader::new("T|e|s|t");
+        let mut parser = repeat_and_count_separated(1.., ascii_alpha, read_text("|"));
+
+        let result = parser(&mut reader);
+        assert_eq!(result, Ok(4));
+        assert_eq!(reader.byte_offset(), 7);
+
+        let result = parser(&mut reader);
+        assert_eq!(result, Err(ParserResultError::NotFound));
+        assert_eq!(reader.byte_offset(), 7);
+
+        // Case failing because missing element.
+
+        let mut reader = Reader::new("T|e|");
+        let mut parser = repeat_and_count_separated(.., ascii_alpha, read_text("|"));
+
+        let result = parser(&mut reader);
+        assert_eq!(result, Ok(2));
+        assert_eq!(reader.byte_offset(), 3);
     }
 
     #[test]
