@@ -11,6 +11,8 @@ use jpar::verifiers::text_verifier;
 use jpar::ParserResult;
 use jpar::Reader;
 
+// DISCLAIMER: This is a copy of nom's arithmetic bench with the code adapted. All rights reserved to them.
+
 // Parser definition
 
 // We transform an integer string into a i64, ignoring surrounding whitespaces
@@ -20,7 +22,7 @@ fn factor(input: &mut Reader) -> ParserResult<i64> {
     delimited(
         ucd_single_line_whitespace0,
         alternative((
-            map_result(decimal_digit1, |digits| {
+            map_result(decimal_digit1, |_, digits| {
                 unsafe { std::str::from_utf8_unchecked(digits.as_bytes()) }
                     .parse()
                     .unwrap()

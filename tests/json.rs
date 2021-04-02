@@ -12,6 +12,8 @@ use jpar::verifiers::text_verifier;
 use jpar::Reader;
 use jpar::{ParserResult, ParserResultError};
 
+// DISCLAIMER: This is a copy of nom's json bench with the code adapted. All rights reserved to them.
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum JsonValue {
     Null,

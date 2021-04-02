@@ -6,6 +6,8 @@ use jpar::verifiers::text_verifier;
 use jpar::ParserResult;
 use jpar::Reader;
 
+// DISCLAIMER: This is a copy of nom's arithmetic bench with the code adapted. All rights reserved to them.
+
 // Parser definition
 
 // We transform an integer string into a i64, ignoring surrounding whitespaces
