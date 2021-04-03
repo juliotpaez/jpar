@@ -68,9 +68,14 @@ impl<'a, C, Err> Reader<'a, Err, C> {
 
     // GETTERS ----------------------------------------------------------------
 
-    /// The associated context of the `Reader` if there's any.
+    /// The associated context of the `Reader`.
     pub fn context(&self) -> &C {
         &self.context
+    }
+
+    /// The associated context of the `Reader`.
+    pub fn context_mut(&mut self) -> &mut C {
+        &mut self.context
     }
 
     /// The content of the `Reader`.
