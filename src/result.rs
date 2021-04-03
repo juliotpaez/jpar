@@ -20,4 +20,13 @@ impl<Err> ParserResultError<Err> {
     pub fn is_error(&self) -> bool {
         matches!(self, ParserResultError::Error(_))
     }
+
+    // METHODS ----------------------------------------------------------------
+
+    pub fn unwrap_error(self) -> (Cursor, Err) {
+        match self {
+            ParserResultError::Error(e) => e,
+            ParserResultError::NotFound => unreachable!(),
+        }
+    }
 }
