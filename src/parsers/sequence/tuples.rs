@@ -9,11 +9,13 @@ pub trait Tuple<'a, C, R, Err> {
 
     /// Parses the input and returns a tuple of results of each parser.
     /// Between each parser `separator` is executed and its result discarded.
-    fn parse_separated<RSep>(
+    fn parse_separated<S, RSep>(
         &mut self,
         reader: &mut Reader<'a, Err, C>,
-        separator: impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RSep, Err>,
-    ) -> ParserResult<R, Err>;
+        separator: S,
+    ) -> ParserResult<R, Err>
+    where
+        S: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RSep, Err>;
 }
 
 /// Applies a tuple of parsers one by one and returns their results as a tuple.
@@ -50,11 +52,14 @@ where
         })(reader)
     }
 
-    fn parse_separated<RSep>(
+    fn parse_separated<S, RSep>(
         &mut self,
         reader: &mut Reader<'a, Err, C>,
-        _: impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RSep, Err>,
-    ) -> ParserResult<(R1,), Err> {
+        _: S,
+    ) -> ParserResult<(R1,), Err>
+    where
+        S: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RSep, Err>,
+    {
         self.parse(reader)
     }
 }
@@ -73,11 +78,14 @@ where
         })(reader)
     }
 
-    fn parse_separated<RSep>(
+    fn parse_separated<S, RSep>(
         &mut self,
         reader: &mut Reader<'a, Err, C>,
-        mut separator: impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RSep, Err>,
-    ) -> ParserResult<(R1, R2), Err> {
+        mut separator: S,
+    ) -> ParserResult<(R1, R2), Err>
+    where
+        S: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RSep, Err>,
+    {
         not_found_restore(move |reader| {
             let r0 = self.0(reader)?;
             separator(reader)?;
@@ -104,11 +112,14 @@ where
         })(reader)
     }
 
-    fn parse_separated<RSep>(
+    fn parse_separated<S, RSep>(
         &mut self,
         reader: &mut Reader<'a, Err, C>,
-        mut separator: impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RSep, Err>,
-    ) -> ParserResult<(R1, R2, R3), Err> {
+        mut separator: S,
+    ) -> ParserResult<(R1, R2, R3), Err>
+    where
+        S: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RSep, Err>,
+    {
         not_found_restore(move |reader| {
             let r0 = self.0(reader)?;
             separator(reader)?;
@@ -140,11 +151,14 @@ where
         })(reader)
     }
 
-    fn parse_separated<RSep>(
+    fn parse_separated<S, RSep>(
         &mut self,
         reader: &mut Reader<'a, Err, C>,
-        mut separator: impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RSep, Err>,
-    ) -> ParserResult<(R1, R2, R3, R4), Err> {
+        mut separator: S,
+    ) -> ParserResult<(R1, R2, R3, R4), Err>
+    where
+        S: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RSep, Err>,
+    {
         not_found_restore(move |reader| {
             let r0 = self.0(reader)?;
             separator(reader)?;
@@ -183,11 +197,14 @@ where
         })(reader)
     }
 
-    fn parse_separated<RSep>(
+    fn parse_separated<S, RSep>(
         &mut self,
         reader: &mut Reader<'a, Err, C>,
-        mut separator: impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RSep, Err>,
-    ) -> ParserResult<(R1, R2, R3, R4, R5), Err> {
+        mut separator: S,
+    ) -> ParserResult<(R1, R2, R3, R4, R5), Err>
+    where
+        S: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RSep, Err>,
+    {
         not_found_restore(move |reader| {
             let r0 = self.0(reader)?;
             separator(reader)?;
