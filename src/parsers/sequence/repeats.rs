@@ -51,7 +51,7 @@ where
 
         while !quantifier.is_finished(result.len()) {
             let init_loop_cursor = reader.save_cursor();
-            if result.len() > 0 {
+            if !result.is_empty() {
                 match separator(reader) {
                     Ok(_) => {}
                     Err(ParserResultError::NotFound) => break,
