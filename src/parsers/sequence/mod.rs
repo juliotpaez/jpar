@@ -1,5 +1,6 @@
 pub use repeats::*;
 pub use tuples::*;
+pub use tuples_ignore::*;
 
 use crate::parsers::helpers::not_found_restore;
 use crate::result::ParserResult;
@@ -7,6 +8,7 @@ use crate::Reader;
 
 mod repeats;
 mod tuples;
+mod tuples_ignore;
 
 /// Matches an object from the first parser and discards it,
 /// then gets an object from the second parser, and finally

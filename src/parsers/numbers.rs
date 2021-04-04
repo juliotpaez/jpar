@@ -1,9 +1,10 @@
 use crate::parsers::branch::alternative;
 use crate::parsers::characters::{decimal_digit1, read_any_of, read_char};
 use crate::parsers::combinator::optional;
-use crate::parsers::helpers::{consumed, ensure, ignore_result};
+use crate::parsers::helpers::{consumed, ensure};
 use crate::parsers::sequence::tuple;
 use crate::parsers::verifiers::text_verifier;
+use crate::sequence::tuple_ignore;
 use crate::{ParserResult, Reader};
 
 /// Reads an integer number.
@@ -18,16 +19,16 @@ pub fn read_integer<'a, C, Err>(reader: &mut Reader<'a, Err, C>) -> ParserResult
 pub fn read_float<'a, C, Err: From<&'static str>>(
     reader: &mut Reader<'a, Err, C>,
 ) -> ParserResult<&'a str, Err> {
-    consumed(tuple((
+    consumed(tuple_ignore((
         optional(read_any_of(text_verifier("+-"))),
         alternative((
-            ignore_result(tuple((
+            tuple_ignore((
                 decimal_digit1,
-                optional(tuple((read_char('.'), optional(decimal_digit1)))),
-            ))),
-            ignore_result(tuple((read_char('.'), decimal_digit1))),
+                optional(tuple_ignore((read_char('.'), optional(decimal_digit1)))),
+            )),
+            tuple_ignore((read_char('.'), decimal_digit1)),
         )),
-        optional(tuple((
+        optional(tuple_ignore((
             read_any_of(text_verifier("eE")),
             optional(read_any_of(text_verifier("+-"))),
             ensure(decimal_digit1, |_| {

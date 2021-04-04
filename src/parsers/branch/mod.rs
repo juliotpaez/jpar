@@ -1,4 +1,5 @@
 pub use alternatives::*;
+pub use alternatives_ignore::*;
 
 #[cfg(feature = "alloc")]
 use crate::parsers::helpers::map_result;
@@ -7,6 +8,7 @@ use crate::result::{ParserResult, ParserResultError};
 use crate::Reader;
 
 mod alternatives;
+mod alternatives_ignore;
 
 /// Executes the `condition` parser and if it match, discards its value and parses `then`.
 pub fn branch_if<'a, Cond, Then, C, R, Rc, Err>(
