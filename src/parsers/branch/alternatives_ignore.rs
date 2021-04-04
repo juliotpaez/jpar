@@ -24,7 +24,7 @@ where
         let mut i = 0;
         while let Some(value) = parsers.choice(i, reader) {
             match value {
-                Ok(v) => return Ok(v),
+                Ok(_) => return Ok(()),
                 Err(ParserResultError::NotFound) => {}
                 Err(e) => return Err(e),
             }
