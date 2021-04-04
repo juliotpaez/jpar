@@ -36,259 +36,69 @@ where
     }
 }
 
-impl<'a, C, R, T1, Err> Alternative<'a, C, R, Err> for (T1,)
-where
-    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-{
-    fn choice(
-        &mut self,
-        index: usize,
-        reader: &mut ParserInput<'a, Err, C>,
-    ) -> Option<ParserResult<R, Err>> {
-        match index {
-            0 => Some(self.0(reader)),
-            _ => None,
-        }
-    }
-}
+macro_rules! impl_alternative_body (
+    // Origin
+    ($_self:tt, $index:tt, $reader:tt, $($list:ident)+) => {{
+        impl_alternative_body!(0 $_self $index $reader $($list)+);
+    }};
 
-impl<'a, C, R, T1, T2, Err> Alternative<'a, C, R, Err> for (T1, T2)
-where
-    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T2: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-{
-    fn choice(
-        &mut self,
-        index: usize,
-        reader: &mut ParserInput<'a, Err, C>,
-    ) -> Option<ParserResult<R, Err>> {
-        match index {
-            0 => Some(self.0(reader)),
-            1 => Some(self.1(reader)),
-            _ => None,
+    // Internal to build the tuple recursively.
+    ($idx:tt $_self:tt $index:tt $reader:tt $list_first:ident $($list:ident)+) => {
+        if $index == $idx {
+            return Some($_self.$idx($reader));
         }
-    }
-}
 
-impl<'a, C, R, T1, T2, T3, Err> Alternative<'a, C, R, Err> for (T1, T2, T3)
-where
-    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T2: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T3: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-{
-    fn choice(
-        &mut self,
-        index: usize,
-        reader: &mut ParserInput<'a, Err, C>,
-    ) -> Option<ParserResult<R, Err>> {
-        match index {
-            0 => Some(self.0(reader)),
-            1 => Some(self.1(reader)),
-            2 => Some(self.2(reader)),
-            _ => None,
+        $crate::successor!($idx impl_alternative_body $_self $index $reader $($list)+);
+    };
+    ($idx:tt $_self:tt $index:tt $reader:tt $list_first:ident) => {
+        if $index == $idx {
+            return Some($_self.$idx($reader));
         }
-    }
-}
+    };
+);
 
-impl<'a, C, R, T1, T2, T3, T4, Err> Alternative<'a, C, R, Err> for (T1, T2, T3, T4)
-where
-    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T2: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T3: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T4: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-{
-    fn choice(
-        &mut self,
-        index: usize,
-        reader: &mut ParserInput<'a, Err, C>,
-    ) -> Option<ParserResult<R, Err>> {
-        match index {
-            0 => Some(self.0(reader)),
-            1 => Some(self.1(reader)),
-            2 => Some(self.2(reader)),
-            3 => Some(self.3(reader)),
-            _ => None,
-        }
-    }
-}
+macro_rules! impl_alternative_for_tuples (
+    // The actual implementation.
+    (__impl $($input:ident: $output:ident)+) => {
+        impl<'a, C, R, $($input),+,Err> Alternative<'a, C, R, Err> for ($($input),+,)
+        where
+            $($input: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>),+
+        {
+            fn choice(
+                &mut self,
+                index: usize,
+                reader: &mut ParserInput<'a, Err, C>,
+            ) -> Option<ParserResult<R, Err>> {
+                impl_alternative_body!(self, index, reader, $($input)+);
 
-impl<'a, C, R, T1, T2, T3, T4, T5, Err> Alternative<'a, C, R, Err> for (T1, T2, T3, T4, T5)
-where
-    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T2: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T3: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T4: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T5: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-{
-    fn choice(
-        &mut self,
-        index: usize,
-        reader: &mut ParserInput<'a, Err, C>,
-    ) -> Option<ParserResult<R, Err>> {
-        match index {
-            0 => Some(self.0(reader)),
-            1 => Some(self.1(reader)),
-            2 => Some(self.2(reader)),
-            3 => Some(self.3(reader)),
-            4 => Some(self.4(reader)),
-            _ => None,
+                None
+            }
         }
-    }
-}
+    };
 
-impl<'a, C, R, T1, T2, T3, T4, T5, T6, Err> Alternative<'a, C, R, Err> for (T1, T2, T3, T4, T5, T6)
-where
-    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T2: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T3: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T4: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T5: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T6: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-{
-    fn choice(
-        &mut self,
-        index: usize,
-        reader: &mut ParserInput<'a, Err, C>,
-    ) -> Option<ParserResult<R, Err>> {
-        match index {
-            0 => Some(self.0(reader)),
-            1 => Some(self.1(reader)),
-            2 => Some(self.2(reader)),
-            3 => Some(self.3(reader)),
-            4 => Some(self.4(reader)),
-            5 => Some(self.5(reader)),
-            _ => None,
-        }
-    }
-}
+    // Last implementation.
+    ($input_last:ident: $output_last:ident) => {
+        impl_alternative_for_tuples!(__impl $input_last: $output_last);
+    };
 
-impl<'a, C, R, T1, T2, T3, T4, T5, T6, T7, Err> Alternative<'a, C, R, Err>
-    for (T1, T2, T3, T4, T5, T6, T7)
-where
-    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T2: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T3: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T4: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T5: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T6: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T7: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-{
-    fn choice(
-        &mut self,
-        index: usize,
-        reader: &mut ParserInput<'a, Err, C>,
-    ) -> Option<ParserResult<R, Err>> {
-        match index {
-            0 => Some(self.0(reader)),
-            1 => Some(self.1(reader)),
-            2 => Some(self.2(reader)),
-            3 => Some(self.3(reader)),
-            4 => Some(self.4(reader)),
-            5 => Some(self.5(reader)),
-            6 => Some(self.6(reader)),
-            _ => None,
-        }
-    }
-}
+    // Origin.
+    ($($input:ident: $output:ident),+) => {
+        impl_alternative_for_tuples!(__impl $($input: $output)+);
+        impl_alternative_for_tuples!([$($input: $output)+]);
+    };
 
-impl<'a, C, R, T1, T2, T3, T4, T5, T6, T7, T8, Err> Alternative<'a, C, R, Err>
-    for (T1, T2, T3, T4, T5, T6, T7, T8)
-where
-    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T2: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T3: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T4: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T5: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T6: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T7: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T8: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-{
-    fn choice(
-        &mut self,
-        index: usize,
-        reader: &mut ParserInput<'a, Err, C>,
-    ) -> Option<ParserResult<R, Err>> {
-        match index {
-            0 => Some(self.0(reader)),
-            1 => Some(self.1(reader)),
-            2 => Some(self.2(reader)),
-            3 => Some(self.3(reader)),
-            4 => Some(self.4(reader)),
-            5 => Some(self.5(reader)),
-            6 => Some(self.6(reader)),
-            7 => Some(self.7(reader)),
-            _ => None,
-        }
-    }
-}
+    // To remove last -> last
+    ([$input_last:ident: $output_last:ident] $($input_rev:ident: $output_rev:ident)+) => {
+        impl_alternative_for_tuples!($($input_rev: $output_rev),*);
+    };
 
-impl<'a, C, R, T1, T2, T3, T4, T5, T6, T7, T8, T9, Err> Alternative<'a, C, R, Err>
-    for (T1, T2, T3, T4, T5, T6, T7, T8, T9)
-where
-    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T2: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T3: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T4: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T5: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T6: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T7: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T8: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T9: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-{
-    fn choice(
-        &mut self,
-        index: usize,
-        reader: &mut ParserInput<'a, Err, C>,
-    ) -> Option<ParserResult<R, Err>> {
-        match index {
-            0 => Some(self.0(reader)),
-            1 => Some(self.1(reader)),
-            2 => Some(self.2(reader)),
-            3 => Some(self.3(reader)),
-            4 => Some(self.4(reader)),
-            5 => Some(self.5(reader)),
-            6 => Some(self.6(reader)),
-            7 => Some(self.7(reader)),
-            8 => Some(self.8(reader)),
-            _ => None,
-        }
-    }
-}
+    // To remove last -> middle steps
+    ([$input_last:ident: $output_last:ident $($input_rest:ident: $output_rest:ident)+] $($input_rev:ident: $output_rev:ident)*) => {
+        impl_alternative_for_tuples!([$($input_rest: $output_rest)*] $($input_rev: $output_rev)* $input_last: $output_last);  // recursion
+    };
+);
 
-impl<'a, C, R, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, Err> Alternative<'a, C, R, Err>
-    for (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10)
-where
-    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T2: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T3: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T4: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T5: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T6: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T7: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T8: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T9: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-    T10: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
-{
-    fn choice(
-        &mut self,
-        index: usize,
-        reader: &mut ParserInput<'a, Err, C>,
-    ) -> Option<ParserResult<R, Err>> {
-        match index {
-            0 => Some(self.0(reader)),
-            1 => Some(self.1(reader)),
-            2 => Some(self.2(reader)),
-            3 => Some(self.3(reader)),
-            4 => Some(self.4(reader)),
-            5 => Some(self.5(reader)),
-            6 => Some(self.6(reader)),
-            7 => Some(self.7(reader)),
-            8 => Some(self.8(reader)),
-            9 => Some(self.9(reader)),
-            _ => None,
-        }
-    }
-}
+crate::execute_for_tuples!(impl_alternative_for_tuples);
 
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------

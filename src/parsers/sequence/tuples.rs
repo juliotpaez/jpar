@@ -40,189 +40,107 @@ where
     move |reader| parsers.parse_separated(reader, |r| separator(r))
 }
 
-impl<'a, C, T1, R1, Err> Tuple<'a, C, (R1,), Err> for (T1,)
-where
-    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R1, Err>,
-{
-    fn parse(&mut self, reader: &mut ParserInput<'a, Err, C>) -> ParserResult<(R1,), Err> {
-        not_found_restore(move |reader| {
-            let r0 = self.0(reader)?;
+macro_rules! impl_tuple_body (
+    // Origin
+    ($_self:tt, $reader:tt, $($list:ident)+) => {{
+        impl_tuple_body!(0 $_self $reader $($list)+);
+        ($($list),+,)
+    }};
 
-            Ok((r0,))
-        })(reader)
-    }
+    // Internal to build the tuple recursively.
+    ($idx:tt $_self:tt $reader:tt $list_first:ident $($list:ident)+) => {
+        #[allow(non_snake_case)]
+        let $list_first = $_self.$idx($reader)?;
+        $crate::successor!($idx impl_tuple_body $_self $reader $($list)+);
+    };
+    ($idx:tt $_self:tt $reader:tt $list_first:ident) => {
+        #[allow(non_snake_case)]
+        let $list_first = $_self.$idx($reader)?;
+    };
+);
 
-    fn parse_separated<S, RSep>(
-        &mut self,
-        reader: &mut ParserInput<'a, Err, C>,
-        _: S,
-    ) -> ParserResult<(R1,), Err>
-    where
-        S: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<RSep, Err>,
-    {
-        self.parse(reader)
-    }
-}
+macro_rules! impl_tuple_body_separated (
+    // Origin
+    ($_self:tt, $reader:tt, $separator:tt, $($list:ident)+) => {{
+        impl_tuple_body_separated!(0 $_self $reader $separator $($list)+);
+        ($($list),+,)
+    }};
 
-impl<'a, C, T1, T2, R1, R2, Err> Tuple<'a, C, (R1, R2), Err> for (T1, T2)
-where
-    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R1, Err>,
-    T2: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R2, Err>,
-{
-    fn parse(&mut self, reader: &mut ParserInput<'a, Err, C>) -> ParserResult<(R1, R2), Err> {
-        not_found_restore(move |reader| {
-            let r0 = self.0(reader)?;
-            let r1 = self.1(reader)?;
+    // Internal to build the tuple recursively.
+    (0 $_self:tt $reader:tt $separator:tt $list_first:ident $($list:ident)+) => {
+        #[allow(non_snake_case)]
+        let $list_first = $_self.0($reader)?;
+        $crate::successor!(0 impl_tuple_body_separated $_self $reader $separator $($list)+);
+    };
+    ($idx:tt $_self:tt $reader:tt $separator:tt $list_first:ident $($list:ident)+) => {
+        $separator($reader)?;
+        #[allow(non_snake_case)]
+        let $list_first = $_self.$idx($reader)?;
+        $crate::successor!($idx impl_tuple_body_separated $_self $reader $separator $($list)+);
+    };
+    (0 $_self:tt $reader:tt $separator:tt $list_first:ident) => {
+        #[allow(non_snake_case)]
+        let $list_first = $_self.0($reader)?;
+    };
+    ($idx:tt $_self:tt $reader:tt $separator:tt $list_first:ident) => {
+        $separator($reader)?;
+        #[allow(non_snake_case)]
+        let $list_first = $_self.$idx($reader)?;
+    };
+);
 
-            Ok((r0, r1))
-        })(reader)
-    }
+macro_rules! impl_tuple_for_tuples (
+    // The actual implementation.
+    (__impl $($input:ident: $output:ident)+) => {
+        impl<'a, C, $($input),+, $($output),+,Err> Tuple<'a, C, ($($output),+,), Err> for ($($input),+,)
+        where
+            $($input: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<$output, Err>),+
+        {
+            fn parse(&mut self, reader: &mut ParserInput<'a, Err, C>) -> ParserResult<($($output),+,), Err> {
+                not_found_restore(move |reader| {
+                    Ok(impl_tuple_body!(self, reader, $($input)+))
+                })(reader)
+            }
 
-    fn parse_separated<S, RSep>(
-        &mut self,
-        reader: &mut ParserInput<'a, Err, C>,
-        mut separator: S,
-    ) -> ParserResult<(R1, R2), Err>
-    where
-        S: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<RSep, Err>,
-    {
-        not_found_restore(move |reader| {
-            let r0 = self.0(reader)?;
-            separator(reader)?;
-            let r1 = self.1(reader)?;
+            fn parse_separated<S, RSep>(
+                &mut self,
+                reader: &mut ParserInput<'a, Err, C>,
+                #[allow(unused_variables, unused_mut)]
+                mut separator: S,
+            ) -> ParserResult<($($output),+,), Err>
+                where
+                    S: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<RSep, Err>,
+            {
+                not_found_restore(move |reader| {
+                    Ok(impl_tuple_body_separated!(self, reader, separator, $($input)+))
+                })(reader)
+            }
+        }
+    };
 
-            Ok((r0, r1))
-        })(reader)
-    }
-}
+    // Last implementation.
+    ($input_last:ident: $output_last:ident) => {
+        impl_tuple_for_tuples!(__impl $input_last: $output_last);
+    };
 
-impl<'a, C, T1, T2, T3, R1, R2, R3, Err> Tuple<'a, C, (R1, R2, R3), Err> for (T1, T2, T3)
-where
-    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R1, Err>,
-    T2: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R2, Err>,
-    T3: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R3, Err>,
-{
-    fn parse(&mut self, reader: &mut ParserInput<'a, Err, C>) -> ParserResult<(R1, R2, R3), Err> {
-        not_found_restore(move |reader| {
-            let r0 = self.0(reader)?;
-            let r1 = self.1(reader)?;
-            let r2 = self.2(reader)?;
+    // Origin.
+    ($($input:ident: $output:ident),+) => {
+        impl_tuple_for_tuples!(__impl $($input: $output)+);
+        impl_tuple_for_tuples!([$($input: $output)+]);
+    };
 
-            Ok((r0, r1, r2))
-        })(reader)
-    }
+    // To remove last -> last
+    ([$input_last:ident: $output_last:ident] $($input_rev:ident: $output_rev:ident)+) => {
+        impl_tuple_for_tuples!($($input_rev: $output_rev),*);
+    };
 
-    fn parse_separated<S, RSep>(
-        &mut self,
-        reader: &mut ParserInput<'a, Err, C>,
-        mut separator: S,
-    ) -> ParserResult<(R1, R2, R3), Err>
-    where
-        S: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<RSep, Err>,
-    {
-        not_found_restore(move |reader| {
-            let r0 = self.0(reader)?;
-            separator(reader)?;
-            let r1 = self.1(reader)?;
-            separator(reader)?;
-            let r2 = self.2(reader)?;
+    // To remove last -> middle steps
+    ([$input_last:ident: $output_last:ident $($input_rest:ident: $output_rest:ident)+] $($input_rev:ident: $output_rev:ident)*) => {
+        impl_tuple_for_tuples!([$($input_rest: $output_rest)*] $($input_rev: $output_rev)* $input_last: $output_last);  // recursion
+    };
+);
 
-            Ok((r0, r1, r2))
-        })(reader)
-    }
-}
-
-impl<'a, C, T1, T2, T3, T4, R1, R2, R3, R4, Err> Tuple<'a, C, (R1, R2, R3, R4), Err>
-    for (T1, T2, T3, T4)
-where
-    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R1, Err>,
-    T2: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R2, Err>,
-    T3: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R3, Err>,
-    T4: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R4, Err>,
-{
-    fn parse(
-        &mut self,
-        reader: &mut ParserInput<'a, Err, C>,
-    ) -> ParserResult<(R1, R2, R3, R4), Err> {
-        not_found_restore(move |reader| {
-            let r0 = self.0(reader)?;
-            let r1 = self.1(reader)?;
-            let r2 = self.2(reader)?;
-            let r3 = self.3(reader)?;
-
-            Ok((r0, r1, r2, r3))
-        })(reader)
-    }
-
-    fn parse_separated<S, RSep>(
-        &mut self,
-        reader: &mut ParserInput<'a, Err, C>,
-        mut separator: S,
-    ) -> ParserResult<(R1, R2, R3, R4), Err>
-    where
-        S: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<RSep, Err>,
-    {
-        not_found_restore(move |reader| {
-            let r0 = self.0(reader)?;
-            separator(reader)?;
-            let r1 = self.1(reader)?;
-            separator(reader)?;
-            let r2 = self.2(reader)?;
-            separator(reader)?;
-            let r3 = self.3(reader)?;
-
-            Ok((r0, r1, r2, r3))
-        })(reader)
-    }
-}
-
-impl<'a, C, T1, T2, T3, T4, T5, R1, R2, R3, R4, R5, Err> Tuple<'a, C, (R1, R2, R3, R4, R5), Err>
-    for (T1, T2, T3, T4, T5)
-where
-    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R1, Err>,
-    T2: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R2, Err>,
-    T3: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R3, Err>,
-    T4: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R4, Err>,
-    T5: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R5, Err>,
-{
-    fn parse(
-        &mut self,
-        reader: &mut ParserInput<'a, Err, C>,
-    ) -> ParserResult<(R1, R2, R3, R4, R5), Err> {
-        not_found_restore(move |reader| {
-            let r0 = self.0(reader)?;
-            let r1 = self.1(reader)?;
-            let r2 = self.2(reader)?;
-            let r3 = self.3(reader)?;
-            let r4 = self.4(reader)?;
-
-            Ok((r0, r1, r2, r3, r4))
-        })(reader)
-    }
-
-    fn parse_separated<S, RSep>(
-        &mut self,
-        reader: &mut ParserInput<'a, Err, C>,
-        mut separator: S,
-    ) -> ParserResult<(R1, R2, R3, R4, R5), Err>
-    where
-        S: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<RSep, Err>,
-    {
-        not_found_restore(move |reader| {
-            let r0 = self.0(reader)?;
-            separator(reader)?;
-            let r1 = self.1(reader)?;
-            separator(reader)?;
-            let r2 = self.2(reader)?;
-            separator(reader)?;
-            let r3 = self.3(reader)?;
-            separator(reader)?;
-            let r4 = self.4(reader)?;
-
-            Ok((r0, r1, r2, r3, r4))
-        })(reader)
-    }
-}
+crate::execute_for_tuples!(impl_tuple_for_tuples);
 
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
