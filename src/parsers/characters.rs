@@ -28,7 +28,7 @@ pub static UCD_WHITESPACE_CHARS: &[RangeInclusive<char>] = &[
 ];
 
 /// Follow UCD specification: https://www.unicode.org/Public/13.0.0/ucd/PropList.txt
-pub static UCD_SINGLE_LINE_WHITESPACE_CHARS: &[RangeInclusive<char>] = &[
+pub static UCD_INLINE_WHITESPACE_CHARS: &[RangeInclusive<char>] = &[
     '\u{9}'..='\u{9}',
     '\u{20}'..='\u{20}',
     '\u{A0}'..='\u{A0}',
@@ -40,7 +40,7 @@ pub static UCD_SINGLE_LINE_WHITESPACE_CHARS: &[RangeInclusive<char>] = &[
 ];
 
 /// Follow UCD specification: https://www.unicode.org/Public/13.0.0/ucd/PropList.txt
-pub static UCD_MULTILINE_WHITESPACE_CHARS: &[RangeInclusive<char>] = &[
+pub static UCD_LINE_BREAK_WHITESPACE_CHARS: &[RangeInclusive<char>] = &[
     '\u{A}'..='\u{D}',
     '\u{85}'..='\u{85}',
     '\u{2028}'..='\u{2029}',
@@ -157,27 +157,27 @@ impl_range_parser!(
 );
 
 impl_range_parser!(
-    UCD_SINGLE_LINE_WHITESPACE_CHARS,
-    ucd_single_line_whitespace,
-    "Reads one Unicode single-line whitespace",
-    ucd_single_line_whitespace0,
-    "Reads zero or more Unicode single-line whitespaces",
-    ucd_single_line_whitespace1,
-    "Reads one or more Unicode single-line whitespaces",
-    ucd_single_line_whitespace_quantified,
-    "Reads a quantified number of Unicode single-line whitespaces"
+    UCD_INLINE_WHITESPACE_CHARS,
+    ucd_inline_whitespace,
+    "Reads one Unicode inline whitespace",
+    ucd_inline_whitespace0,
+    "Reads zero or more Unicode inline whitespaces",
+    ucd_inline_whitespace1,
+    "Reads one or more Unicode inline whitespaces",
+    ucd_inline_whitespace_quantified,
+    "Reads a quantified number of Unicode inline whitespaces"
 );
 
 impl_range_parser!(
-    UCD_MULTILINE_WHITESPACE_CHARS,
-    ucd_multiline_whitespace,
-    "Reads one Unicode multiline whitespace",
-    ucd_multiline_whitespace0,
-    "Reads zero or more Unicode multiline whitespaces",
-    ucd_multiline_whitespace1,
-    "Reads one or more Unicode multiline whitespaces",
-    ucd_multiline_whitespace_quantified,
-    "Reads a quantified number of Unicode multiline whitespaces"
+    UCD_LINE_BREAK_WHITESPACE_CHARS,
+    ucd_line_break_whitespace,
+    "Reads one Unicode line break whitespace",
+    ucd_line_break_whitespace0,
+    "Reads zero or more Unicode line break whitespaces",
+    ucd_line_break_whitespace1,
+    "Reads one or more Unicode line break whitespaces",
+    ucd_line_break_whitespace_quantified,
+    "Reads a quantified number of Unicode line break whitespaces"
 );
 
 /// Reads a character.

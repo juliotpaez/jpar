@@ -4,7 +4,7 @@ extern crate criterion;
 use criterion::Criterion;
 
 use jpar::branch::alternative;
-use jpar::characters::{decimal_digit1, read_any_of, read_char, ucd_single_line_whitespace0};
+use jpar::characters::{decimal_digit1, read_any_of, read_char, ucd_inline_whitespace0};
 use jpar::helpers::map_result;
 use jpar::sequence::{delimited, repeat_and_fold, tuple};
 use jpar::verifiers::text_verifier;
@@ -20,7 +20,7 @@ use jpar::Reader;
 // If there are no digits, we look for a parenthesized expression.
 fn factor(input: &mut Reader) -> ParserResult<i64> {
     delimited(
-        ucd_single_line_whitespace0,
+        ucd_inline_whitespace0,
         alternative((
             map_result(decimal_digit1, |_, digits| {
                 unsafe { std::str::from_utf8_unchecked(digits.as_bytes()) }
@@ -29,7 +29,7 @@ fn factor(input: &mut Reader) -> ParserResult<i64> {
             }),
             delimited(read_char('('), expr, read_char(')')),
         )),
-        ucd_single_line_whitespace0,
+        ucd_inline_whitespace0,
     )(input)
 }
 
