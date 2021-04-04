@@ -3,7 +3,7 @@ use std::ops::RangeInclusive;
 use crate::parsers::helpers::map_result;
 use crate::parsers::Quantifier;
 use crate::result::{ParserResult, ParserResultError};
-use crate::Reader;
+use crate::ParserInput;
 
 pub static ASCII_ALPHA_CHARS: &[RangeInclusive<char>] = &['A'..='Z', 'a'..='z'];
 pub static ASCII_ALPHANUMERIC_CHARS: &[RangeInclusive<char>] = &['0'..='9', 'A'..='Z', 'a'..='z'];
@@ -49,24 +49,24 @@ pub static UCD_LINE_BREAK_WHITESPACE_CHARS: &[RangeInclusive<char>] = &[
 macro_rules! impl_range_parser {
     ($chars:expr, $name:ident, $comment:literal, $name0:ident, $comment0:literal, $name1:ident, $comment1:literal, $name_qtf:ident, $comment_qtf:literal $(,)?) => {
         #[doc = $comment]
-        pub fn $name<'a, C, Err>(reader: &mut Reader<'a, Err, C>) -> ParserResult<char, Err> {
+        pub fn $name<'a, C, Err>(reader: &mut ParserInput<'a, Err, C>) -> ParserResult<char, Err> {
             read_any_of(crate::parsers::verifiers::interval_verifier($chars))(reader)
         }
 
         #[doc = $comment0]
-        pub fn $name0<'a, C, Err>(reader: &mut Reader<'a, Err, C>) -> ParserResult<&'a str, Err> {
+        pub fn $name0<'a, C, Err>(reader: &mut ParserInput<'a, Err, C>) -> ParserResult<&'a str, Err> {
             read_any_of_quantified(0.., crate::parsers::verifiers::interval_verifier($chars))(reader)
         }
 
         #[doc = $comment1]
-        pub fn $name1<'a, C, Err>(reader: &mut Reader<'a, Err, C>) -> ParserResult<&'a str, Err> {
+        pub fn $name1<'a, C, Err>(reader: &mut ParserInput<'a, Err, C>) -> ParserResult<&'a str, Err> {
             read_any_of_quantified(1.., crate::parsers::verifiers::interval_verifier($chars))(reader)
         }
 
         #[doc = $comment_qtf]
         pub fn $name_qtf<'a, C, Err>(
             quantifier: impl Into<Quantifier>,
-        ) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<&'a str, Err> {
+        ) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<&'a str, Err> {
             read_any_of_quantified(quantifier, crate::parsers::verifiers::interval_verifier($chars))
         }
     };
@@ -183,7 +183,7 @@ impl_range_parser!(
 /// Reads a character.
 pub fn read_char<'a, C, Err>(
     character: char,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<char, Err> {
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<char, Err> {
     move |reader| match reader.peek() {
         Some(v) => {
             if v == character {
@@ -199,7 +199,7 @@ pub fn read_char<'a, C, Err>(
 /// Reads a character without taking into account the casing of the text.
 pub fn read_char_no_case<'a, C, Err>(
     character: char,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<char, Err> {
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<char, Err> {
     move |reader| match reader.peek() {
         Some(v) => {
             if character
@@ -218,7 +218,7 @@ pub fn read_char_no_case<'a, C, Err>(
 /// Reads a text.
 pub fn read_text<'a, C, Err>(
     text: &'a str,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<&'a str, Err> {
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<&'a str, Err> {
     move |reader| {
         if reader.read_text(text) {
             Ok(text)
@@ -231,7 +231,7 @@ pub fn read_text<'a, C, Err>(
 /// Reads a text without taking into account the casing of the text.
 pub fn read_text_no_case<'a, C, Err>(
     text: &'a str,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<&'a str, Err> {
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<&'a str, Err> {
     move |reader| {
         let mut chars = text.chars();
         let result = reader.read_while(|i, c| {
@@ -254,7 +254,7 @@ pub fn read_text_no_case<'a, C, Err>(
 /// Reads one character a quantified number of times.
 pub fn read_any_quantified<'a, C, Err>(
     quantifier: impl Into<Quantifier>,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<&'a str, Err> {
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<&'a str, Err> {
     let quantifier = quantifier.into();
     move |reader| match reader.read_quantified(quantifier) {
         Some(v) => Ok(v),
@@ -263,17 +263,17 @@ pub fn read_any_quantified<'a, C, Err>(
 }
 
 /// Reads one character.
-pub fn read_any<C, Err>(reader: &mut Reader<Err, C>) -> ParserResult<char, Err> {
+pub fn read_any<C, Err>(reader: &mut ParserInput<Err, C>) -> ParserResult<char, Err> {
     map_result(read_any_quantified(1), |_, v| v.chars().next().unwrap())(reader)
 }
 
 /// Reads zero or more character.
-pub fn read_any0<'a, C, Err>(reader: &mut Reader<'a, Err, C>) -> ParserResult<&'a str, Err> {
+pub fn read_any0<'a, C, Err>(reader: &mut ParserInput<'a, Err, C>) -> ParserResult<&'a str, Err> {
     read_any_quantified(0..)(reader)
 }
 
 /// Reads one or more characters.
-pub fn read_any1<'a, C, Err>(reader: &mut Reader<'a, Err, C>) -> ParserResult<&'a str, Err> {
+pub fn read_any1<'a, C, Err>(reader: &mut ParserInput<'a, Err, C>) -> ParserResult<&'a str, Err> {
     read_any_quantified(1..)(reader)
 }
 
@@ -281,7 +281,7 @@ pub fn read_any1<'a, C, Err>(reader: &mut Reader<'a, Err, C>) -> ParserResult<&'
 pub fn read_any_of_quantified<'a, C, Err>(
     quantifier: impl Into<Quantifier>,
     verifier: impl Fn(usize, char) -> bool,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<&'a str, Err> {
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<&'a str, Err> {
     let quantifier = quantifier.into();
     move |reader| match reader.read_while_quantified(quantifier, |i, c| verifier(i, c)) {
         Some(v) => Ok(v),
@@ -292,7 +292,7 @@ pub fn read_any_of_quantified<'a, C, Err>(
 /// Reads one character that is inside `interval`.
 pub fn read_any_of<'a, C, Err>(
     verifier: impl Fn(usize, char) -> bool,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<char, Err> {
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<char, Err> {
     map_result(read_any_of_quantified(1, verifier), |_, v| {
         v.chars().next().unwrap()
     })
@@ -301,14 +301,14 @@ pub fn read_any_of<'a, C, Err>(
 /// Reads zero or more characters that are inside `interval`.
 pub fn read_any_of0<'a, C, Err>(
     verifier: impl Fn(usize, char) -> bool,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<&'a str, Err> {
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<&'a str, Err> {
     read_any_of_quantified(0.., verifier)
 }
 
 /// Reads one or more characters that are inside `interval`.
 pub fn read_any_of1<'a, C, Err>(
     verifier: impl Fn(usize, char) -> bool,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<&'a str, Err> {
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<&'a str, Err> {
     read_any_of_quantified(1.., verifier)
 }
 
@@ -316,7 +316,7 @@ pub fn read_any_of1<'a, C, Err>(
 pub fn read_none_of_quantified<'a, C, Err>(
     quantifier: impl Into<Quantifier>,
     verifier: impl Fn(usize, char) -> bool,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<&'a str, Err> {
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<&'a str, Err> {
     let quantifier = quantifier.into();
     move |reader| match reader.read_while_quantified(quantifier, |i, c| !verifier(i, c)) {
         Some(v) => Ok(v),
@@ -327,7 +327,7 @@ pub fn read_none_of_quantified<'a, C, Err>(
 /// Reads one character that is not inside `interval`.
 pub fn read_none_of<'a, C, Err>(
     verifier: impl Fn(usize, char) -> bool,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<char, Err> {
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<char, Err> {
     map_result(read_none_of_quantified(1, verifier), |_, v| {
         v.chars().next().unwrap()
     })
@@ -336,14 +336,14 @@ pub fn read_none_of<'a, C, Err>(
 /// Reads zero or more characters that are not inside `interval`.
 pub fn read_none_of0<'a, C, Err>(
     verifier: impl Fn(usize, char) -> bool,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<&'a str, Err> {
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<&'a str, Err> {
     read_none_of_quantified(0.., verifier)
 }
 
 /// Reads one or more characters that are not inside `interval`.
 pub fn read_none_of1<'a, C, Err>(
     verifier: impl Fn(usize, char) -> bool,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<&'a str, Err> {
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<&'a str, Err> {
     read_none_of_quantified(1.., verifier)
 }
 
@@ -359,7 +359,7 @@ mod test {
 
     #[test]
     fn test_read_char() {
-        let mut reader = Reader::new("This is a test");
+        let mut reader = ParserInput::new("This is a test");
 
         let result = read_char('T')(&mut reader);
         assert_eq!(result, Ok('T'));
@@ -373,7 +373,7 @@ mod test {
 
     #[test]
     fn test_read_char_no_case() {
-        let mut reader = Reader::new("This is a test");
+        let mut reader = ParserInput::new("This is a test");
 
         let result = read_char_no_case('t')(&mut reader);
         assert_eq!(result, Ok('T'));
@@ -387,7 +387,7 @@ mod test {
 
     #[test]
     fn test_read_text() {
-        let mut reader = Reader::new("This is a text");
+        let mut reader = ParserInput::new("This is a text");
 
         let result = read_text("This")(&mut reader);
         assert_eq!(result, Ok("This"));
@@ -401,7 +401,7 @@ mod test {
 
     #[test]
     fn test_read_text_no_case() {
-        let mut reader = Reader::new("This is a text");
+        let mut reader = ParserInput::new("This is a text");
 
         let result = read_text_no_case("tHIS")(&mut reader);
         assert_eq!(result, Ok("This"));
@@ -415,7 +415,7 @@ mod test {
 
     #[test]
     fn test_read_any_quantified() {
-        let mut reader = Reader::new("This is a test");
+        let mut reader = ParserInput::new("This is a test");
 
         let result = read_any_quantified(4)(&mut reader);
         assert_eq!(result, Ok("This"));
@@ -429,7 +429,7 @@ mod test {
 
     #[test]
     fn test_read_any_of_quantified() {
-        let mut reader = Reader::new("This is a test");
+        let mut reader = ParserInput::new("This is a test");
 
         let result = read_any_of_quantified(1.., interval_verifier(&['A'..='Z']))(&mut reader);
         assert_eq!(result, Ok("T"));
@@ -443,7 +443,7 @@ mod test {
 
     #[test]
     fn test_read_any1() {
-        let mut reader = Reader::new("This is a test");
+        let mut reader = ParserInput::new("This is a test");
 
         let result = read_none_of_quantified(1.., interval_verifier(&['a'..='z']))(&mut reader);
         assert_eq!(result, Ok("T"));

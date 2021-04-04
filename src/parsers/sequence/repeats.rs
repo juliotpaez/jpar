@@ -1,16 +1,16 @@
 use crate::parsers::helpers::not_found_restore;
 use crate::parsers::Quantifier;
 use crate::result::{ParserResult, ParserResultError};
-use crate::Reader;
+use crate::ParserInput;
 
 /// Repeats a parser a quantified number of times.
 #[cfg(feature = "alloc")]
 pub fn repeat<'a, P, C, R, Err>(
     quantifier: impl Into<Quantifier>,
     mut parser: P,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<Vec<R>, Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<Vec<R>, Err>
 where
-    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
+    P: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
 {
     let quantifier = quantifier.into();
 
@@ -39,10 +39,10 @@ pub fn repeat_separated<'a, P, S, C, R, RSep, Err>(
     quantifier: impl Into<Quantifier>,
     mut parser: P,
     mut separator: S,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<Vec<R>, Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<Vec<R>, Err>
 where
-    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
-    S: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RSep, Err>,
+    P: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
+    S: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<RSep, Err>,
 {
     let quantifier = quantifier.into();
 
@@ -80,8 +80,8 @@ where
 /// Repeats a parser a quantified number of times and returns the number of repetitions.
 pub fn repeat_and_count<'a, C, R, Err>(
     quantifier: impl Into<Quantifier>,
-    mut parser: impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<usize, Err> {
+    mut parser: impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<usize, Err> {
     let quantifier = quantifier.into();
 
     not_found_restore(move |reader| {
@@ -109,10 +109,10 @@ pub fn repeat_and_count_separated<'a, P, S, C, R, RSep, Err>(
     quantifier: impl Into<Quantifier>,
     mut parser: P,
     mut separator: S,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<usize, Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<usize, Err>
 where
-    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
-    S: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RSep, Err>,
+    P: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
+    S: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<RSep, Err>,
 {
     let quantifier = quantifier.into();
 
@@ -151,8 +151,8 @@ where
 /// Repeats a parser to fill a slice.
 pub fn repeat_to_fill<'a, C, R, Err>(
     buffer: &'a mut [R],
-    mut parser: impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<(), Err> {
+    mut parser: impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<(), Err> {
     not_found_restore(move |reader| {
         for item in buffer.iter_mut() {
             match parser(reader) {
@@ -173,9 +173,9 @@ pub fn repeat_and_fold<'a, P, F, C, R: Clone, Rp, Err>(
     init: R,
     fold: F,
     mut parser: P,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>
 where
-    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<Rp, Err>,
+    P: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<Rp, Err>,
     F: Fn(R, Rp) -> R,
 {
     let quantifier = quantifier.into();
@@ -207,10 +207,10 @@ where
 pub fn count_and_repeat<'a, Rep, P, C, R, Err>(
     mut repetitions: Rep,
     mut parser: P,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<Vec<R>, Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<Vec<R>, Err>
 where
-    Rep: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<usize, Err>,
-    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
+    Rep: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<usize, Err>,
+    P: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
 {
     not_found_restore(move |reader| {
         let repetitions = repetitions(reader)?;
@@ -237,7 +237,7 @@ mod test {
 
     #[test]
     fn test_repeat_and_count() {
-        let mut reader = Reader::new("Test ");
+        let mut reader = ParserInput::new("Test ");
         let mut parser = repeat_and_count(1.., ascii_alpha);
 
         let result = parser(&mut reader);
@@ -249,7 +249,7 @@ mod test {
 
     #[test]
     fn test_repeat_and_count_separated() {
-        let mut reader = Reader::new("T|e|s|t");
+        let mut reader = ParserInput::new("T|e|s|t");
         let mut parser = repeat_and_count_separated(1.., ascii_alpha, read_text("|"));
 
         let result = parser(&mut reader);
@@ -262,7 +262,7 @@ mod test {
 
         // Case failing because missing element.
 
-        let mut reader = Reader::new("T|e|");
+        let mut reader = ParserInput::new("T|e|");
         let mut parser = repeat_and_count_separated(.., ascii_alpha, read_text("|"));
 
         let result = parser(&mut reader);
@@ -272,7 +272,7 @@ mod test {
 
     #[test]
     fn test_repeat_to_fill() {
-        let mut reader = Reader::new("This is a test");
+        let mut reader = ParserInput::new("This is a test");
         let mut buffer = [0; 5];
 
         let result = {
@@ -286,7 +286,7 @@ mod test {
 
     #[test]
     fn test_repeat_to_fill_not_found() {
-        let mut reader = Reader::new("This is a test");
+        let mut reader = ParserInput::new("This is a test");
         let mut buffer = [0; 5];
 
         let result = {
@@ -300,7 +300,7 @@ mod test {
 
     #[test]
     fn test_repeat_and_fold() {
-        let mut reader = Reader::new("This is a test");
+        let mut reader = ParserInput::new("This is a test");
 
         let result = {
             let mut parser =
@@ -322,7 +322,7 @@ mod test_alloc {
 
     #[test]
     fn test_repeat() {
-        let mut reader = Reader::new("Test");
+        let mut reader = ParserInput::new("Test");
         let mut parser = repeat(3, ascii_alpha);
 
         let result = parser(&mut reader);
@@ -334,7 +334,7 @@ mod test_alloc {
 
     #[test]
     fn test_repeat_separated() {
-        let mut reader = Reader::new("T|e|s|t");
+        let mut reader = ParserInput::new("T|e|s|t");
         let mut parser = repeat_separated(3, ascii_alpha, read_text("|"));
 
         let result = parser(&mut reader);
@@ -347,7 +347,7 @@ mod test_alloc {
 
         // Case failing because missing element.
 
-        let mut reader = Reader::new("T|e|");
+        let mut reader = ParserInput::new("T|e|");
         let mut parser = repeat_separated(.., ascii_alpha, read_text("|"));
 
         let result = parser(&mut reader);
@@ -357,7 +357,7 @@ mod test_alloc {
 
     #[test]
     fn test_count_and_repeat() {
-        let mut reader = Reader::new("Test");
+        let mut reader = ParserInput::new("Test");
         let mut parser = count_and_repeat(value(3), ascii_alpha);
 
         let result = parser(&mut reader);

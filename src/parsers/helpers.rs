@@ -1,12 +1,12 @@
 use crate::result::{ParserResult, ParserResultError};
-use crate::{Cursor, Reader};
+use crate::{Cursor, ParserInput};
 
 /// Restores the reader when a not found error is returned.
 pub fn not_found_restore<'a, P, C, R, Err>(
     mut parser: P,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>
 where
-    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
+    P: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
 {
     move |reader| {
         let init_cursor = reader.save_cursor();
@@ -26,10 +26,10 @@ where
 pub fn map_result<'a, P, M, C, R, Rf, Err>(
     mut parser: P,
     mut mapper: M,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<Rf, Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<Rf, Err>
 where
-    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
-    M: FnMut(&mut Reader<'a, Err, C>, R) -> Rf,
+    P: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
+    M: FnMut(&mut ParserInput<'a, Err, C>, R) -> Rf,
 {
     move |reader| {
         let result = parser(reader)?;
@@ -42,10 +42,10 @@ where
 pub fn and_then<'a, P, M, C, R, Rf, Err>(
     mut parser: P,
     mut mapper: M,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<Rf, Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<Rf, Err>
 where
-    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
-    M: FnMut(&mut Reader<'a, Err, C>, R) -> ParserResult<Rf, Err>,
+    P: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
+    M: FnMut(&mut ParserInput<'a, Err, C>, R) -> ParserResult<Rf, Err>,
 {
     not_found_restore(move |reader| {
         let result = parser(reader)?;
@@ -58,14 +58,15 @@ where
 pub fn map_parser<'a, O, P, C: Clone, R, Err>(
     mut origin: O,
     mut parser: P,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>
 where
-    O: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<&'a str, Err>,
-    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
+    O: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<&'a str, Err>,
+    P: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
 {
     not_found_restore(move |reader| {
         let result = origin(reader)?;
-        let mut new_reader = Reader::new_with_context_and_error(result, reader.context().clone());
+        let mut new_reader =
+            ParserInput::new_with_context_and_error(result, reader.context().clone());
 
         parser(&mut new_reader)
     })
@@ -74,9 +75,9 @@ where
 /// Applies a parser discarding its result and return the consumed content as result.
 pub fn consumed<'a, P, C, R, Err>(
     mut parser: P,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<&'a str, Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<&'a str, Err>
 where
-    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
+    P: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
 {
     move |reader| {
         let init_cursor = reader.save_cursor();
@@ -94,9 +95,9 @@ where
 /// Applies a parser discarding its result.
 pub fn ignore_result<'a, P, C, R, Err>(
     mut parser: P,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<(), Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<(), Err>
 where
-    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
+    P: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
 {
     not_found_restore(move |reader| {
         let _ = parser(reader)?;
@@ -107,7 +108,7 @@ where
 /// Always succeeds with given value without consuming any input.
 pub fn value<'a, C, R: Clone, Err>(
     value: R,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err> {
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err> {
     move |_| Ok(value.clone())
 }
 
@@ -115,9 +116,9 @@ pub fn value<'a, C, R: Clone, Err>(
 /// The value is built dynamically.
 pub fn value_dyn<'a, C, R, Err, VFn>(
     mut value_fn: VFn,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>
 where
-    VFn: FnMut(&mut Reader<'a, Err, C>) -> R,
+    VFn: FnMut(&mut ParserInput<'a, Err, C>) -> R,
 {
     move |reader| Ok(value_fn(reader))
 }
@@ -125,7 +126,7 @@ where
 /// Always fails with the given error without consuming any input.
 pub fn error<'a, C, R, Err: Clone>(
     error: Err,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err> {
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err> {
     move |reader| {
         Err(ParserResultError::Error((
             reader.save_cursor(),
@@ -138,9 +139,9 @@ pub fn error<'a, C, R, Err: Clone>(
 /// The error is built dynamically.
 pub fn error_dyn<'a, C, R, Err, EFn>(
     mut error_fn: EFn,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>
 where
-    EFn: FnMut(&mut Reader<'a, Err, C>) -> Err,
+    EFn: FnMut(&mut ParserInput<'a, Err, C>) -> Err,
 {
     move |reader| {
         Err(ParserResultError::Error((
@@ -154,10 +155,10 @@ where
 pub fn ensure<'a, P, C, R, Efn, Err>(
     mut parser: P,
     mut error_fn: Efn,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>
 where
-    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
-    Efn: FnMut(&mut Reader<'a, Err, C>) -> Err,
+    P: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
+    Efn: FnMut(&mut ParserInput<'a, Err, C>) -> Err,
 {
     move |reader| match parser(reader) {
         Ok(v) => Ok(v),
@@ -173,10 +174,10 @@ where
 pub fn recover<'a, P, C, R, Rfn, Err>(
     mut parser: P,
     mut recover_fn: Rfn,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>
 where
-    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
-    Rfn: FnMut(&mut Reader<'a, Err, C>, Cursor, Err) -> ParserResult<R, Err>,
+    P: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
+    Rfn: FnMut(&mut ParserInput<'a, Err, C>, Cursor, Err) -> ParserResult<R, Err>,
 {
     not_found_restore(move |reader| match parser(reader) {
         Ok(v) => Ok(v),
@@ -201,7 +202,7 @@ mod test {
 
     #[test]
     fn test_not_found_restore() {
-        let mut reader = Reader::new("This is a test");
+        let mut reader = ParserInput::new("This is a test");
         let mut parser = not_found_restore(read_text("This"));
         let result = parser(&mut reader);
         assert_eq!(result, Ok("This"));
@@ -218,7 +219,7 @@ mod test {
 
     #[test]
     fn test_map_result() {
-        let mut reader = Reader::new("This is a test");
+        let mut reader = ParserInput::new("This is a test");
         let mut parser = map_result(ascii_alpha1, |_, _| 32);
 
         let result = parser(&mut reader);
@@ -230,7 +231,7 @@ mod test {
 
     #[test]
     fn test_and_then() {
-        let mut reader = Reader::new("This is a test");
+        let mut reader = ParserInput::new("This is a test");
         let mut parser = and_then(ascii_alpha1, |_, _| Ok(32));
 
         let result = parser(&mut reader);
@@ -241,7 +242,7 @@ mod test {
 
         // Case when mapper fails.
 
-        let mut reader = Reader::new("This is a test");
+        let mut reader = ParserInput::new("This is a test");
         let mut parser = and_then(ascii_alpha_quantified(1), |_, _| -> ParserResult<(), ()> {
             Err(ParserResultError::NotFound)
         });
@@ -251,7 +252,7 @@ mod test {
 
     #[test]
     fn test_map_parser() {
-        let mut reader = Reader::new("Test 123");
+        let mut reader = ParserInput::new("Test 123");
         let mut parser = map_parser(read_any_quantified(3), read_any);
 
         let result = parser(&mut reader);
@@ -266,7 +267,7 @@ mod test {
 
     #[test]
     fn test_consumed() {
-        let mut reader = Reader::new("Test 123");
+        let mut reader = ParserInput::new("Test 123");
         let mut parser = consumed(tuple((read_text("Te"), read_text("st"))));
 
         let result = parser(&mut reader);
@@ -275,7 +276,7 @@ mod test {
 
     #[test]
     fn test_ignore_result() {
-        let mut reader = Reader::new("Test 123");
+        let mut reader = ParserInput::new("Test 123");
         let mut parser = ignore_result(tuple((read_text("Te"), read_text("st"))));
 
         let result = parser(&mut reader);
@@ -284,7 +285,7 @@ mod test {
 
     #[test]
     fn test_value() {
-        let mut reader = Reader::new("This is a test");
+        let mut reader = ParserInput::new("This is a test");
         let mut parser = value(true);
 
         let result = parser(&mut reader);
@@ -296,7 +297,7 @@ mod test {
 
     #[test]
     fn test_value_dyn() {
-        let mut reader = Reader::new("This is a test");
+        let mut reader = ParserInput::new("This is a test");
         let mut parser = value_dyn(|_| true);
 
         let result = parser(&mut reader);
@@ -308,7 +309,7 @@ mod test {
 
     #[test]
     fn test_error() {
-        let mut reader = Reader::new_with_error("This is a test");
+        let mut reader = ParserInput::new_with_error("This is a test");
         let mut parser = error("test");
 
         let result: ParserResult<(), &str> = parser(&mut reader);
@@ -323,7 +324,7 @@ mod test {
 
     #[test]
     fn test_error_dyn() {
-        let mut reader = Reader::new_with_error("This is a test");
+        let mut reader = ParserInput::new_with_error("This is a test");
         let mut parser = error_dyn(|r| format!("test at {}", r.save_cursor().char_offset()));
 
         let result: ParserResult<(), String> = parser(&mut reader);
@@ -338,7 +339,7 @@ mod test {
 
     #[test]
     fn test_ensure() {
-        let mut reader = Reader::new_with_error::<&str>("This is a test");
+        let mut reader = ParserInput::new_with_error::<&str>("This is a test");
         let mut parser = ensure(read_text("Test"), |_| "test");
 
         let result = parser(&mut reader);
@@ -353,7 +354,7 @@ mod test {
 
     #[test]
     fn test_recover() {
-        let mut reader = Reader::new_with_error::<&str>("This is a test");
+        let mut reader = ParserInput::new_with_error::<&str>("This is a test");
         let mut parser = recover(error("test1"), |_, _, _| Ok("recover"));
 
         let result = parser(&mut reader);

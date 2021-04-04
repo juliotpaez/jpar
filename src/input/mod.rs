@@ -10,21 +10,21 @@ use crate::parsers::Quantifier;
 mod cursor;
 mod span;
 
-/// A `String` reader that moves a cursor the reader updated.
+/// A text input for the parsers.
 #[derive(Debug, Clone)]
-pub struct Reader<'a, Err = (), C = ()> {
+pub struct ParserInput<'a, Err = (), C = ()> {
     content: &'a str,
     cursor: Cursor,
     context: C,
     _error: PhantomData<Err>,
 }
 
-impl<'a> Reader<'a> {
+impl<'a> ParserInput<'a> {
     // CONSTRUCTORS -----------------------------------------------------------
 
     /// Create a new `Reader` with the specified `content`.
-    pub fn new(content: &'a str) -> Reader<'a, (), ()> {
-        Reader {
+    pub fn new(content: &'a str) -> ParserInput<'a, (), ()> {
+        ParserInput {
             content,
             cursor: Cursor::new(0, 0, 1, 1),
             context: (),
@@ -33,8 +33,8 @@ impl<'a> Reader<'a> {
     }
 
     /// Create a new `Reader` with the specified `content` and defining an error type.
-    pub fn new_with_error<Err>(content: &'a str) -> Reader<'a, Err, ()> {
-        Reader {
+    pub fn new_with_error<Err>(content: &'a str) -> ParserInput<'a, Err, ()> {
+        ParserInput {
             content,
             cursor: Cursor::new(0, 0, 1, 1),
             context: (),
@@ -43,8 +43,8 @@ impl<'a> Reader<'a> {
     }
 
     /// Create a new `Reader` with the specified `content` and `context`.
-    pub fn new_with_context<C>(content: &'a str, context: C) -> Reader<'a, (), C> {
-        Reader {
+    pub fn new_with_context<C>(content: &'a str, context: C) -> ParserInput<'a, (), C> {
+        ParserInput {
             content,
             cursor: Cursor::new(0, 0, 1, 1),
             context,
@@ -53,12 +53,12 @@ impl<'a> Reader<'a> {
     }
 }
 
-impl<'a, C, Err> Reader<'a, Err, C> {
+impl<'a, C, Err> ParserInput<'a, Err, C> {
     // CONSTRUCTORS -----------------------------------------------------------
 
     /// Create a new `Reader` with the specified `content` and `context` and defining an error type.
-    pub fn new_with_context_and_error(content: &'a str, context: C) -> Reader<'a, Err, C> {
-        Reader {
+    pub fn new_with_context_and_error(content: &'a str, context: C) -> ParserInput<'a, Err, C> {
+        ParserInput {
             content,
             cursor: Cursor::new(0, 0, 1, 1),
             context,
@@ -139,8 +139,8 @@ impl<'a, C, Err> Reader<'a, Err, C> {
     /// # Example
     ///
     /// ```
-    /// # use jpar::Reader;
-    /// let mut reader = Reader::new("test");
+    /// # use jpar::ParserInput;
+    /// let mut reader = ParserInput::new("test");
     /// assert_eq!(reader.read(), Some('t'));
     /// assert_eq!(reader.read(), Some('e'));
     /// assert_eq!(reader.read(), Some('s'));
@@ -162,8 +162,8 @@ impl<'a, C, Err> Reader<'a, Err, C> {
     /// # Example
     ///
     /// ```
-    /// # use jpar::Reader;
-    /// let mut reader = Reader::new("test");
+    /// # use jpar::ParserInput;
+    /// let mut reader = ParserInput::new("test");
     /// assert!(reader.read_text("te"));
     /// assert!(reader.read_text("st"));
     /// assert!(!reader.read_text("123"));
@@ -182,8 +182,8 @@ impl<'a, C, Err> Reader<'a, Err, C> {
     /// # Example
     ///
     /// ```
-    /// # use jpar::Reader;
-    /// let mut reader = Reader::new("this test");
+    /// # use jpar::ParserInput;
+    /// let mut reader = ParserInput::new("this test");
     ///
     /// let result = reader.read_quantified(4);
     /// assert_eq!(result, Some("this"));
@@ -215,8 +215,8 @@ impl<'a, C, Err> Reader<'a, Err, C> {
     /// # Example
     ///
     /// ```
-    /// # use jpar::Reader;
-    /// let mut reader = Reader::new("this test");
+    /// # use jpar::ParserInput;
+    /// let mut reader = ParserInput::new("this test");
     ///
     /// let result = reader.read_while(|i,c| ('a'..='z').contains(&c));
     /// assert_eq!(result, "this");
@@ -240,8 +240,8 @@ impl<'a, C, Err> Reader<'a, Err, C> {
     /// # Example
     ///
     /// ```
-    /// # use jpar::Reader;
-    /// let mut reader = Reader::new("this test");
+    /// # use jpar::ParserInput;
+    /// let mut reader = ParserInput::new("this test");
     ///
     /// let result = reader.read_while_quantified(1..=4, |i,c| c != 'i');
     /// assert_eq!(result, Some("th"));
@@ -271,8 +271,8 @@ impl<'a, C, Err> Reader<'a, Err, C> {
     /// # Example
     ///
     /// ```
-    /// # use jpar::Reader;
-    /// let mut reader = Reader::new("test");
+    /// # use jpar::ParserInput;
+    /// let mut reader = ParserInput::new("test");
     /// assert_eq!(reader.peek(), Some('t'));
     /// assert_eq!(reader.peek(), Some('t'));
     /// assert_eq!(reader.read(), Some('t'));
@@ -294,8 +294,8 @@ impl<'a, C, Err> Reader<'a, Err, C> {
     /// # Example
     ///
     /// ```
-    /// # use jpar::Reader;
-    /// let mut reader = Reader::new("test");
+    /// # use jpar::ParserInput;
+    /// let mut reader = ParserInput::new("test");
     /// assert!(reader.peek_text("te"));
     /// assert!(reader.peek_text("test"));
     /// assert!(!reader.peek_text("123"));
@@ -312,8 +312,8 @@ impl<'a, C, Err> Reader<'a, Err, C> {
     /// # Example
     ///
     /// ```
-    /// # use jpar::Reader;
-    /// let mut reader = Reader::new("this test");
+    /// # use jpar::ParserInput;
+    /// let mut reader = ParserInput::new("this test");
     /// assert_eq!(reader.byte_offset(), 0);
     ///
     /// let result = reader.peek_quantified(..);
@@ -358,8 +358,8 @@ impl<'a, C, Err> Reader<'a, Err, C> {
     /// # Example
     ///
     /// ```
-    /// # use jpar::Reader;
-    /// let mut reader = Reader::new("this test");
+    /// # use jpar::ParserInput;
+    /// let mut reader = ParserInput::new("this test");
     /// assert_eq!(reader.byte_offset(), 0);
     ///
     /// let result = reader.peek_while(|i,c| ('a'..='z').contains(&c));
@@ -400,8 +400,8 @@ impl<'a, C, Err> Reader<'a, Err, C> {
     /// # Example
     ///
     /// ```
-    /// # use jpar::Reader;
-    /// let mut reader = Reader::new("this test");
+    /// # use jpar::ParserInput;
+    /// let mut reader = ParserInput::new("this test");
     /// assert_eq!(reader.byte_offset(), 0);
     ///
     /// let result = reader.peek_while_quantified(1..=4, |i,c| c != 'i');
@@ -448,8 +448,8 @@ impl<'a, C, Err> Reader<'a, Err, C> {
     /// # Example
     ///
     /// ```
-    /// # use jpar::Reader;
-    /// let mut reader = Reader::new("this test");
+    /// # use jpar::ParserInput;
+    /// let mut reader = ParserInput::new("this test");
     ///
     /// assert_eq!(reader.read(), Some('t'));
     /// assert_eq!(reader.read(), Some('h'));
@@ -482,8 +482,8 @@ impl<'a, C, Err> Reader<'a, Err, C> {
     /// # Example
     ///
     /// ```
-    /// # use jpar::Reader;
-    /// let mut reader = Reader::new("this test");
+    /// # use jpar::ParserInput;
+    /// let mut reader = ParserInput::new("this test");
     /// assert_eq!(reader.read(), Some('t'));
     /// assert_eq!(reader.read(), Some('h'));
     /// let from = reader.save_cursor();
@@ -506,8 +506,8 @@ impl<'a, C, Err> Reader<'a, Err, C> {
     /// # Example
     ///
     /// ```
-    /// # use jpar::Reader;
-    /// let mut reader = Reader::new("this test");
+    /// # use jpar::ParserInput;
+    /// let mut reader = ParserInput::new("this test");
     ///
     /// assert_eq!(reader.read(), Some('t'));
     /// assert_eq!(reader.read(), Some('h'));
@@ -528,8 +528,8 @@ impl<'a, C, Err> Reader<'a, Err, C> {
     /// # Example
     ///
     /// ```
-    /// # use jpar::Reader;
-    /// let mut reader = Reader::new("this test");
+    /// # use jpar::ParserInput;
+    /// let mut reader = ParserInput::new("this test");
     /// let cursor = reader.save_cursor();
     ///
     /// assert_eq!(reader.byte_offset(), 0);
@@ -586,7 +586,7 @@ impl<'a, C, Err> Reader<'a, Err, C> {
     }
 }
 
-impl<'a, C: Clone> Reader<'a, C> {
+impl<'a, C: Clone> ParserInput<'a, C> {
     // GETTERS ----------------------------------------------------------------
 
     /// The remaining content as an `Span`.
@@ -609,7 +609,7 @@ mod tests {
     #[test]
     fn test_consume_0() {
         let text = "This\nis\nthe\nfragment";
-        let mut reader = Reader::new(text);
+        let mut reader = ParserInput::new(text);
         reader.consume(0);
 
         assert_eq!(reader.byte_offset(), 0, "The offset is incorrect");
@@ -621,7 +621,7 @@ mod tests {
     #[test]
     fn test_consume() {
         let text = "This\nis\nthe\nfragment";
-        let mut reader = Reader::new(text);
+        let mut reader = ParserInput::new(text);
         reader.consume(2);
 
         assert_eq!(reader.byte_offset(), 2, "The offset is incorrect");
@@ -647,7 +647,7 @@ mod tests {
     #[test]
     fn test_consume_utf_chars() {
         let text = "モスフェト";
-        let mut reader = Reader::new(text);
+        let mut reader = ParserInput::new(text);
         reader.consume(3);
 
         assert_eq!(reader.byte_offset(), 3, "The offset is incorrect");

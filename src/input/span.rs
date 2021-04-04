@@ -1,6 +1,6 @@
 use memchr::{memchr, memrchr};
 
-use crate::reader::Cursor;
+use crate::input::Cursor;
 
 /// A Span is a set of meta information about the location of a substring.
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -14,7 +14,7 @@ impl<'a> Span<'a> {
     // CONSTRUCTORS -----------------------------------------------------------
 
     /// Builds a new `Span` with the specified data.
-    pub(in crate::reader) fn new(
+    pub(in crate::input) fn new(
         content: &'a str,
         start_cursor: Cursor,
         end_cursor: Cursor,
@@ -79,8 +79,8 @@ impl<'a> Span<'a> {
     /// # Example
     ///
     /// ```
-    /// # use jpar::Reader;
-    /// let mut reader = Reader::new("This\nis\nthe\nfragment");
+    /// # use jpar::ParserInput;
+    /// let mut reader = ParserInput::new("This\nis\nthe\nfragment");
     ///
     /// // ... prepare the span to contain: "his\nis\nt" ...
     /// # reader.read();

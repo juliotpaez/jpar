@@ -5,10 +5,12 @@ use crate::parsers::helpers::{consumed, ensure};
 use crate::parsers::sequence::tuple;
 use crate::parsers::verifiers::text_verifier;
 use crate::sequence::tuple_ignore;
-use crate::{ParserResult, Reader};
+use crate::{ParserInput, ParserResult};
 
 /// Reads an integer number.
-pub fn read_integer<'a, C, Err>(reader: &mut Reader<'a, Err, C>) -> ParserResult<&'a str, Err> {
+pub fn read_integer<'a, C, Err>(
+    reader: &mut ParserInput<'a, Err, C>,
+) -> ParserResult<&'a str, Err> {
     consumed(tuple((
         optional(read_any_of(text_verifier("+-"))),
         decimal_digit1,
@@ -17,7 +19,7 @@ pub fn read_integer<'a, C, Err>(reader: &mut Reader<'a, Err, C>) -> ParserResult
 
 /// Reads a float number.
 pub fn read_float<'a, C, Err: From<&'static str>>(
-    reader: &mut Reader<'a, Err, C>,
+    reader: &mut ParserInput<'a, Err, C>,
 ) -> ParserResult<&'a str, Err> {
     consumed(tuple_ignore((
         optional(read_any_of(text_verifier("+-"))),
@@ -50,54 +52,54 @@ mod test {
 
     #[test]
     fn test_read_integer() {
-        let mut reader = Reader::new("0123456789");
+        let mut reader = ParserInput::new("0123456789");
         let result = read_integer(&mut reader);
         assert_eq!(result, Ok("0123456789"));
 
-        let mut reader = Reader::new("+0123456789");
+        let mut reader = ParserInput::new("+0123456789");
         let result = read_integer(&mut reader);
         assert_eq!(result, Ok("+0123456789"));
 
-        let mut reader = Reader::new("-0123456789");
+        let mut reader = ParserInput::new("-0123456789");
         let result = read_integer(&mut reader);
         assert_eq!(result, Ok("-0123456789"));
 
-        let mut reader = Reader::new("a23");
+        let mut reader = ParserInput::new("a23");
         let result = read_integer(&mut reader);
         assert_eq!(result, Err(ParserResultError::NotFound));
     }
 
     #[test]
     fn test_read_float() {
-        let mut reader = Reader::new_with_error::<&str>("0123456789");
+        let mut reader = ParserInput::new_with_error::<&str>("0123456789");
         let result = read_float(&mut reader);
         assert_eq!(result, Ok("0123456789"));
 
-        let mut reader = Reader::new_with_error::<&str>("+0123456789.0123456789");
+        let mut reader = ParserInput::new_with_error::<&str>("+0123456789.0123456789");
         let result = read_float(&mut reader);
         assert_eq!(result, Ok("+0123456789.0123456789"));
 
-        let mut reader = Reader::new_with_error::<&str>("-.0123456789");
+        let mut reader = ParserInput::new_with_error::<&str>("-.0123456789");
         let result = read_float(&mut reader);
         assert_eq!(result, Ok("-.0123456789"));
 
-        let mut reader = Reader::new_with_error::<&str>("-0123456789.");
+        let mut reader = ParserInput::new_with_error::<&str>("-0123456789.");
         let result = read_float(&mut reader);
         assert_eq!(result, Ok("-0123456789."));
 
-        let mut reader = Reader::new_with_error::<&str>("0123456789e0123456789");
+        let mut reader = ParserInput::new_with_error::<&str>("0123456789e0123456789");
         let result = read_float(&mut reader);
         assert_eq!(result, Ok("0123456789e0123456789"));
 
-        let mut reader = Reader::new_with_error::<&str>("0123456789E+0123456789");
+        let mut reader = ParserInput::new_with_error::<&str>("0123456789E+0123456789");
         let result = read_float(&mut reader);
         assert_eq!(result, Ok("0123456789E+0123456789"));
 
-        let mut reader = Reader::new_with_error::<&str>("0123456789E-0123456789");
+        let mut reader = ParserInput::new_with_error::<&str>("0123456789E-0123456789");
         let result = read_float(&mut reader);
         assert_eq!(result, Ok("0123456789E-0123456789"));
 
-        let mut reader = Reader::new_with_error::<&str>("a23");
+        let mut reader = ParserInput::new_with_error::<&str>("a23");
         let result = read_float(&mut reader);
         assert_eq!(result, Err(ParserResultError::NotFound));
     }

@@ -4,7 +4,7 @@ pub use tuples_ignore::*;
 
 use crate::parsers::helpers::not_found_restore;
 use crate::result::ParserResult;
-use crate::Reader;
+use crate::ParserInput;
 
 mod repeats;
 mod tuples;
@@ -17,11 +17,11 @@ pub fn delimited<'a, Pre, Con, Pos, C, RPre, R, RPos, Err>(
     mut prefix: Pre,
     mut content: Con,
     mut postfix: Pos,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>
 where
-    Pre: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RPre, Err>,
-    Con: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
-    Pos: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RPos, Err>,
+    Pre: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<RPre, Err>,
+    Con: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
+    Pos: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<RPos, Err>,
 {
     not_found_restore(move |reader| {
         let _ = prefix(reader)?;
@@ -36,10 +36,10 @@ where
 pub fn preceded<'a, Pre, Con, C, RPre, R, Err>(
     mut prefix: Pre,
     mut content: Con,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>
 where
-    Pre: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RPre, Err>,
-    Con: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
+    Pre: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<RPre, Err>,
+    Con: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
 {
     not_found_restore(move |reader| {
         let _ = prefix(reader)?;
@@ -51,10 +51,10 @@ where
 pub fn terminated<'a, Con, Pos, C, R, RPos, Err>(
     mut content: Con,
     mut postfix: Pos,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>
 where
-    Con: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
-    Pos: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RPos, Err>,
+    Con: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
+    Pos: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<RPos, Err>,
 {
     not_found_restore(move |reader| {
         let result = content(reader)?;
@@ -77,52 +77,52 @@ mod test {
 
     #[test]
     fn test_delimited() {
-        let mut reader = Reader::new("(abcd)");
+        let mut reader = ParserInput::new("(abcd)");
         let mut parser = delimited(read_text("("), ascii_alpha1, read_text(")"));
         let result = parser(&mut reader);
         assert_eq!(result, Ok("abcd"));
 
-        let mut reader = Reader::new("abcd)");
+        let mut reader = ParserInput::new("abcd)");
         let result = parser(&mut reader);
         assert_eq!(result, Err(ParserResultError::NotFound));
 
-        let mut reader = Reader::new("()");
+        let mut reader = ParserInput::new("()");
         let result = parser(&mut reader);
         assert_eq!(result, Err(ParserResultError::NotFound));
 
-        let mut reader = Reader::new("(abcd");
+        let mut reader = ParserInput::new("(abcd");
         let result = parser(&mut reader);
         assert_eq!(result, Err(ParserResultError::NotFound));
     }
 
     #[test]
     fn test_preceded() {
-        let mut reader = Reader::new("(abcd)");
+        let mut reader = ParserInput::new("(abcd)");
         let mut parser = preceded(read_text("("), ascii_alpha1);
         let result = parser(&mut reader);
         assert_eq!(result, Ok("abcd"));
 
-        let mut reader = Reader::new("abcd)");
+        let mut reader = ParserInput::new("abcd)");
         let result = parser(&mut reader);
         assert_eq!(result, Err(ParserResultError::NotFound));
 
-        let mut reader = Reader::new("()");
+        let mut reader = ParserInput::new("()");
         let result = parser(&mut reader);
         assert_eq!(result, Err(ParserResultError::NotFound));
     }
 
     #[test]
     fn test_terminated() {
-        let mut reader = Reader::new("abcd)");
+        let mut reader = ParserInput::new("abcd)");
         let mut parser = terminated(ascii_alpha1, read_text(")"));
         let result = parser(&mut reader);
         assert_eq!(result, Ok("abcd"));
 
-        let mut reader = Reader::new("abcd");
+        let mut reader = ParserInput::new("abcd");
         let result = parser(&mut reader);
         assert_eq!(result, Err(ParserResultError::NotFound));
 
-        let mut reader = Reader::new(")");
+        let mut reader = ParserInput::new(")");
         let result = parser(&mut reader);
         assert_eq!(result, Err(ParserResultError::NotFound));
     }

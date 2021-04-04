@@ -1,7 +1,7 @@
 use std::option::Option::Some;
 
 use crate::result::{ParserResult, ParserResultError};
-use crate::Reader;
+use crate::ParserInput;
 
 /// Helper trait for the [alternative_ignore()] combinator.
 pub trait AlternativeIgnore<'a, C, Err> {
@@ -9,14 +9,14 @@ pub trait AlternativeIgnore<'a, C, Err> {
     fn choice(
         &mut self,
         index: usize,
-        reader: &mut Reader<'a, Err, C>,
+        reader: &mut ParserInput<'a, Err, C>,
     ) -> Option<ParserResult<(), Err>>;
 }
 
 /// Returns the first alternative that matches in order.
 pub fn alternative_ignore<'a, P, C, Err>(
     mut parsers: P,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<(), Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<(), Err>
 where
     P: AlternativeIgnore<'a, C, Err>,
 {
@@ -38,12 +38,12 @@ where
 
 impl<'a, C, T1, R1, Err> AlternativeIgnore<'a, C, Err> for (T1,)
 where
-    T1: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R1, Err>,
+    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R1, Err>,
 {
     fn choice(
         &mut self,
         index: usize,
-        reader: &mut Reader<'a, Err, C>,
+        reader: &mut ParserInput<'a, Err, C>,
     ) -> Option<ParserResult<(), Err>> {
         match index {
             0 => Some(self.0(reader).map(|_| ())),
@@ -54,13 +54,13 @@ where
 
 impl<'a, C, T1, T2, R1, R2, Err> AlternativeIgnore<'a, C, Err> for (T1, T2)
 where
-    T1: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R1, Err>,
-    T2: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R2, Err>,
+    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R1, Err>,
+    T2: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R2, Err>,
 {
     fn choice(
         &mut self,
         index: usize,
-        reader: &mut Reader<'a, Err, C>,
+        reader: &mut ParserInput<'a, Err, C>,
     ) -> Option<ParserResult<(), Err>> {
         match index {
             0 => Some(self.0(reader).map(|_| ())),
@@ -72,14 +72,14 @@ where
 
 impl<'a, C, T1, T2, T3, R1, R2, R3, Err> AlternativeIgnore<'a, C, Err> for (T1, T2, T3)
 where
-    T1: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R1, Err>,
-    T2: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R2, Err>,
-    T3: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R3, Err>,
+    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R1, Err>,
+    T2: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R2, Err>,
+    T3: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R3, Err>,
 {
     fn choice(
         &mut self,
         index: usize,
-        reader: &mut Reader<'a, Err, C>,
+        reader: &mut ParserInput<'a, Err, C>,
     ) -> Option<ParserResult<(), Err>> {
         match index {
             0 => Some(self.0(reader).map(|_| ())),
@@ -92,15 +92,15 @@ where
 
 impl<'a, C, T1, T2, T3, T4, R1, R2, R3, R4, Err> AlternativeIgnore<'a, C, Err> for (T1, T2, T3, T4)
 where
-    T1: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R1, Err>,
-    T2: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R2, Err>,
-    T3: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R3, Err>,
-    T4: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R4, Err>,
+    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R1, Err>,
+    T2: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R2, Err>,
+    T3: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R3, Err>,
+    T4: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R4, Err>,
 {
     fn choice(
         &mut self,
         index: usize,
-        reader: &mut Reader<'a, Err, C>,
+        reader: &mut ParserInput<'a, Err, C>,
     ) -> Option<ParserResult<(), Err>> {
         match index {
             0 => Some(self.0(reader).map(|_| ())),
@@ -115,16 +115,16 @@ where
 impl<'a, C, T1, T2, T3, T4, T5, R1, R2, R3, R4, R5, Err> AlternativeIgnore<'a, C, Err>
     for (T1, T2, T3, T4, T5)
 where
-    T1: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R1, Err>,
-    T2: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R2, Err>,
-    T3: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R3, Err>,
-    T4: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R4, Err>,
-    T5: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R5, Err>,
+    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R1, Err>,
+    T2: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R2, Err>,
+    T3: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R3, Err>,
+    T4: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R4, Err>,
+    T5: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R5, Err>,
 {
     fn choice(
         &mut self,
         index: usize,
-        reader: &mut Reader<'a, Err, C>,
+        reader: &mut ParserInput<'a, Err, C>,
     ) -> Option<ParserResult<(), Err>> {
         match index {
             0 => Some(self.0(reader).map(|_| ())),
@@ -140,17 +140,17 @@ where
 impl<'a, C, T1, T2, T3, T4, T5, T6, R1, R2, R3, R4, R5, R6, Err> AlternativeIgnore<'a, C, Err>
     for (T1, T2, T3, T4, T5, T6)
 where
-    T1: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R1, Err>,
-    T2: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R2, Err>,
-    T3: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R3, Err>,
-    T4: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R4, Err>,
-    T5: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R5, Err>,
-    T6: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R6, Err>,
+    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R1, Err>,
+    T2: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R2, Err>,
+    T3: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R3, Err>,
+    T4: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R4, Err>,
+    T5: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R5, Err>,
+    T6: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R6, Err>,
 {
     fn choice(
         &mut self,
         index: usize,
-        reader: &mut Reader<'a, Err, C>,
+        reader: &mut ParserInput<'a, Err, C>,
     ) -> Option<ParserResult<(), Err>> {
         match index {
             0 => Some(self.0(reader).map(|_| ())),
@@ -167,18 +167,18 @@ where
 impl<'a, C, T1, T2, T3, T4, T5, T6, T7, R1, R2, R3, R4, R5, R6, R7, Err>
     AlternativeIgnore<'a, C, Err> for (T1, T2, T3, T4, T5, T6, T7)
 where
-    T1: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R1, Err>,
-    T2: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R2, Err>,
-    T3: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R3, Err>,
-    T4: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R4, Err>,
-    T5: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R5, Err>,
-    T6: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R6, Err>,
-    T7: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R7, Err>,
+    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R1, Err>,
+    T2: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R2, Err>,
+    T3: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R3, Err>,
+    T4: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R4, Err>,
+    T5: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R5, Err>,
+    T6: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R6, Err>,
+    T7: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R7, Err>,
 {
     fn choice(
         &mut self,
         index: usize,
-        reader: &mut Reader<'a, Err, C>,
+        reader: &mut ParserInput<'a, Err, C>,
     ) -> Option<ParserResult<(), Err>> {
         match index {
             0 => Some(self.0(reader).map(|_| ())),
@@ -196,19 +196,19 @@ where
 impl<'a, C, T1, T2, T3, T4, T5, T6, T7, T8, R1, R2, R3, R4, R5, R6, R7, R8, Err>
     AlternativeIgnore<'a, C, Err> for (T1, T2, T3, T4, T5, T6, T7, T8)
 where
-    T1: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R1, Err>,
-    T2: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R2, Err>,
-    T3: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R3, Err>,
-    T4: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R4, Err>,
-    T5: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R5, Err>,
-    T6: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R6, Err>,
-    T7: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R7, Err>,
-    T8: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R8, Err>,
+    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R1, Err>,
+    T2: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R2, Err>,
+    T3: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R3, Err>,
+    T4: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R4, Err>,
+    T5: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R5, Err>,
+    T6: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R6, Err>,
+    T7: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R7, Err>,
+    T8: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R8, Err>,
 {
     fn choice(
         &mut self,
         index: usize,
-        reader: &mut Reader<'a, Err, C>,
+        reader: &mut ParserInput<'a, Err, C>,
     ) -> Option<ParserResult<(), Err>> {
         match index {
             0 => Some(self.0(reader).map(|_| ())),
@@ -227,20 +227,20 @@ where
 impl<'a, C, T1, T2, T3, T4, T5, T6, T7, T8, T9, R1, R2, R3, R4, R5, R6, R7, R8, R9, Err>
     AlternativeIgnore<'a, C, Err> for (T1, T2, T3, T4, T5, T6, T7, T8, T9)
 where
-    T1: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R1, Err>,
-    T2: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R2, Err>,
-    T3: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R3, Err>,
-    T4: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R4, Err>,
-    T5: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R5, Err>,
-    T6: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R6, Err>,
-    T7: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R7, Err>,
-    T8: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R8, Err>,
-    T9: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R9, Err>,
+    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R1, Err>,
+    T2: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R2, Err>,
+    T3: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R3, Err>,
+    T4: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R4, Err>,
+    T5: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R5, Err>,
+    T6: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R6, Err>,
+    T7: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R7, Err>,
+    T8: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R8, Err>,
+    T9: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R9, Err>,
 {
     fn choice(
         &mut self,
         index: usize,
-        reader: &mut Reader<'a, Err, C>,
+        reader: &mut ParserInput<'a, Err, C>,
     ) -> Option<ParserResult<(), Err>> {
         match index {
             0 => Some(self.0(reader).map(|_| ())),
@@ -283,21 +283,21 @@ impl<
         Err,
     > AlternativeIgnore<'a, C, Err> for (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10)
 where
-    T1: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R1, Err>,
-    T2: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R2, Err>,
-    T3: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R3, Err>,
-    T4: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R4, Err>,
-    T5: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R5, Err>,
-    T6: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R6, Err>,
-    T7: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R7, Err>,
-    T8: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R8, Err>,
-    T9: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R9, Err>,
-    T10: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R10, Err>,
+    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R1, Err>,
+    T2: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R2, Err>,
+    T3: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R3, Err>,
+    T4: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R4, Err>,
+    T5: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R5, Err>,
+    T6: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R6, Err>,
+    T7: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R7, Err>,
+    T8: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R8, Err>,
+    T9: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R9, Err>,
+    T10: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R10, Err>,
 {
     fn choice(
         &mut self,
         index: usize,
-        reader: &mut Reader<'a, Err, C>,
+        reader: &mut ParserInput<'a, Err, C>,
     ) -> Option<ParserResult<(), Err>> {
         match index {
             0 => Some(self.0(reader).map(|_| ())),
@@ -336,7 +336,7 @@ mod test {
             let mut value: Vec<_> = texts.iter().map(|t| read_text(t.as_str())).collect();
             value[i] = read_text("This");
 
-            let mut reader = Reader::new("This is a test");
+            let mut reader = ParserInput::new("This is a test");
             let result = alternative_ignore((value.remove(0),))(&mut reader);
 
             if tuple_size == i {
@@ -359,7 +359,7 @@ mod test {
             let mut value: Vec<_> = texts.iter().map(|t| read_text(t.as_str())).collect();
             value[i] = read_text("This");
 
-            let mut reader = Reader::new("This is a test");
+            let mut reader = ParserInput::new("This is a test");
             let result = alternative_ignore((value.remove(0), value.remove(0)))(&mut reader);
 
             if tuple_size == i {
@@ -382,7 +382,7 @@ mod test {
             let mut value: Vec<_> = texts.iter().map(|t| read_text(t.as_str())).collect();
             value[i] = read_text("This");
 
-            let mut reader = Reader::new("This is a test");
+            let mut reader = ParserInput::new("This is a test");
             let result = alternative_ignore((value.remove(0), value.remove(0), value.remove(0)))(
                 &mut reader,
             );
@@ -407,7 +407,7 @@ mod test {
             let mut value: Vec<_> = texts.iter().map(|t| read_text(t.as_str())).collect();
             value[i] = read_text("This");
 
-            let mut reader = Reader::new("This is a test");
+            let mut reader = ParserInput::new("This is a test");
             let result = alternative_ignore((
                 value.remove(0),
                 value.remove(0),
@@ -435,7 +435,7 @@ mod test {
             let mut value: Vec<_> = texts.iter().map(|t| read_text(t.as_str())).collect();
             value[i] = read_text("This");
 
-            let mut reader = Reader::new("This is a test");
+            let mut reader = ParserInput::new("This is a test");
             let result = alternative_ignore((
                 value.remove(0),
                 value.remove(0),
@@ -464,7 +464,7 @@ mod test {
             let mut value: Vec<_> = texts.iter().map(|t| read_text(t.as_str())).collect();
             value[i] = read_text("This");
 
-            let mut reader = Reader::new("This is a test");
+            let mut reader = ParserInput::new("This is a test");
             let result = alternative_ignore((
                 value.remove(0),
                 value.remove(0),
@@ -494,7 +494,7 @@ mod test {
             let mut value: Vec<_> = texts.iter().map(|t| read_text(t.as_str())).collect();
             value[i] = read_text("This");
 
-            let mut reader = Reader::new("This is a test");
+            let mut reader = ParserInput::new("This is a test");
             let result = alternative_ignore((
                 value.remove(0),
                 value.remove(0),
@@ -525,7 +525,7 @@ mod test {
             let mut value: Vec<_> = texts.iter().map(|t| read_text(t.as_str())).collect();
             value[i] = read_text("This");
 
-            let mut reader = Reader::new("This is a test");
+            let mut reader = ParserInput::new("This is a test");
             let result = alternative_ignore((
                 value.remove(0),
                 value.remove(0),
@@ -557,7 +557,7 @@ mod test {
             let mut value: Vec<_> = texts.iter().map(|t| read_text(t.as_str())).collect();
             value[i] = read_text("This");
 
-            let mut reader = Reader::new("This is a test");
+            let mut reader = ParserInput::new("This is a test");
             let result = alternative_ignore((
                 value.remove(0),
                 value.remove(0),
@@ -590,7 +590,7 @@ mod test {
             let mut value: Vec<_> = texts.iter().map(|t| read_text(t.as_str())).collect();
             value[i] = read_text("This");
 
-            let mut reader = Reader::new("This is a test");
+            let mut reader = ParserInput::new("This is a test");
             let result = alternative_ignore((
                 value.remove(0),
                 value.remove(0),

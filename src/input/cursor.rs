@@ -11,7 +11,7 @@ impl Cursor {
     // CONSTRUCTORS -----------------------------------------------------------
 
     /// Builds a new `Cursor` with the specified data.
-    pub(in crate::reader) fn new(
+    pub(in crate::input) fn new(
         byte_offset: usize,
         char_offset: usize,
         line: usize,

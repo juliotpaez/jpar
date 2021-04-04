@@ -1,27 +1,27 @@
 use crate::parsers::helpers::not_found_restore;
 use crate::result::ParserResult;
-use crate::Reader;
+use crate::ParserInput;
 
 /// Helper trait for the [tuple_ignore()] combinator.
 pub trait TupleIgnore<'a, C, Err> {
     /// Parses the input and returns a tuple of results of each parser.
-    fn parse(&mut self, reader: &mut Reader<'a, Err, C>) -> ParserResult<(), Err>;
+    fn parse(&mut self, reader: &mut ParserInput<'a, Err, C>) -> ParserResult<(), Err>;
 
     /// Parses the input and returns a tuple of results of each parser.
     /// Between each parser `separator` is executed and its result discarded.
     fn parse_separated<S, RSep>(
         &mut self,
-        reader: &mut Reader<'a, Err, C>,
+        reader: &mut ParserInput<'a, Err, C>,
         separator: S,
     ) -> ParserResult<(), Err>
     where
-        S: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RSep, Err>;
+        S: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<RSep, Err>;
 }
 
 /// Applies a tuple of parsers one by one ignoring their results.
 pub fn tuple_ignore<'a, P, C, Err>(
     mut parsers: P,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<(), Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<(), Err>
 where
     P: TupleIgnore<'a, C, Err>,
 {
@@ -32,19 +32,19 @@ where
 pub fn separated_tuple_ignore<'a, P, S, C, RSep, Err>(
     mut parsers: P,
     mut separator: S,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<(), Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<(), Err>
 where
     P: TupleIgnore<'a, C, Err>,
-    S: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RSep, Err>,
+    S: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<RSep, Err>,
 {
     move |reader| parsers.parse_separated(reader, |r| separator(r))
 }
 
 impl<'a, C, T1, R1, Err> TupleIgnore<'a, C, Err> for (T1,)
 where
-    T1: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R1, Err>,
+    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R1, Err>,
 {
-    fn parse(&mut self, reader: &mut Reader<'a, Err, C>) -> ParserResult<(), Err> {
+    fn parse(&mut self, reader: &mut ParserInput<'a, Err, C>) -> ParserResult<(), Err> {
         not_found_restore(move |reader| {
             self.0(reader)?;
 
@@ -54,11 +54,11 @@ where
 
     fn parse_separated<S, RSep>(
         &mut self,
-        reader: &mut Reader<'a, Err, C>,
+        reader: &mut ParserInput<'a, Err, C>,
         _: S,
     ) -> ParserResult<(), Err>
     where
-        S: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RSep, Err>,
+        S: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<RSep, Err>,
     {
         self.parse(reader)
     }
@@ -66,10 +66,10 @@ where
 
 impl<'a, C, T1, T2, R1, R2, Err> TupleIgnore<'a, C, Err> for (T1, T2)
 where
-    T1: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R1, Err>,
-    T2: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R2, Err>,
+    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R1, Err>,
+    T2: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R2, Err>,
 {
-    fn parse(&mut self, reader: &mut Reader<'a, Err, C>) -> ParserResult<(), Err> {
+    fn parse(&mut self, reader: &mut ParserInput<'a, Err, C>) -> ParserResult<(), Err> {
         not_found_restore(move |reader| {
             self.0(reader)?;
             self.1(reader)?;
@@ -80,11 +80,11 @@ where
 
     fn parse_separated<S, RSep>(
         &mut self,
-        reader: &mut Reader<'a, Err, C>,
+        reader: &mut ParserInput<'a, Err, C>,
         mut separator: S,
     ) -> ParserResult<(), Err>
     where
-        S: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RSep, Err>,
+        S: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<RSep, Err>,
     {
         not_found_restore(move |reader| {
             self.0(reader)?;
@@ -98,11 +98,11 @@ where
 
 impl<'a, C, T1, T2, T3, R1, R2, R3, Err> TupleIgnore<'a, C, Err> for (T1, T2, T3)
 where
-    T1: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R1, Err>,
-    T2: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R2, Err>,
-    T3: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R3, Err>,
+    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R1, Err>,
+    T2: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R2, Err>,
+    T3: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R3, Err>,
 {
-    fn parse(&mut self, reader: &mut Reader<'a, Err, C>) -> ParserResult<(), Err> {
+    fn parse(&mut self, reader: &mut ParserInput<'a, Err, C>) -> ParserResult<(), Err> {
         not_found_restore(move |reader| {
             self.0(reader)?;
             self.1(reader)?;
@@ -114,11 +114,11 @@ where
 
     fn parse_separated<S, RSep>(
         &mut self,
-        reader: &mut Reader<'a, Err, C>,
+        reader: &mut ParserInput<'a, Err, C>,
         mut separator: S,
     ) -> ParserResult<(), Err>
     where
-        S: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RSep, Err>,
+        S: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<RSep, Err>,
     {
         not_found_restore(move |reader| {
             self.0(reader)?;
@@ -134,12 +134,12 @@ where
 
 impl<'a, C, T1, T2, T3, T4, R1, R2, R3, R4, Err> TupleIgnore<'a, C, Err> for (T1, T2, T3, T4)
 where
-    T1: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R1, Err>,
-    T2: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R2, Err>,
-    T3: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R3, Err>,
-    T4: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R4, Err>,
+    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R1, Err>,
+    T2: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R2, Err>,
+    T3: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R3, Err>,
+    T4: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R4, Err>,
 {
-    fn parse(&mut self, reader: &mut Reader<'a, Err, C>) -> ParserResult<(), Err> {
+    fn parse(&mut self, reader: &mut ParserInput<'a, Err, C>) -> ParserResult<(), Err> {
         not_found_restore(move |reader| {
             self.0(reader)?;
             self.1(reader)?;
@@ -152,11 +152,11 @@ where
 
     fn parse_separated<S, RSep>(
         &mut self,
-        reader: &mut Reader<'a, Err, C>,
+        reader: &mut ParserInput<'a, Err, C>,
         mut separator: S,
     ) -> ParserResult<(), Err>
     where
-        S: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RSep, Err>,
+        S: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<RSep, Err>,
     {
         not_found_restore(move |reader| {
             self.0(reader)?;
@@ -175,13 +175,13 @@ where
 impl<'a, C, T1, T2, T3, T4, T5, R1, R2, R3, R4, R5, Err> TupleIgnore<'a, C, Err>
     for (T1, T2, T3, T4, T5)
 where
-    T1: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R1, Err>,
-    T2: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R2, Err>,
-    T3: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R3, Err>,
-    T4: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R4, Err>,
-    T5: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R5, Err>,
+    T1: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R1, Err>,
+    T2: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R2, Err>,
+    T3: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R3, Err>,
+    T4: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R4, Err>,
+    T5: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R5, Err>,
 {
-    fn parse(&mut self, reader: &mut Reader<'a, Err, C>) -> ParserResult<(), Err> {
+    fn parse(&mut self, reader: &mut ParserInput<'a, Err, C>) -> ParserResult<(), Err> {
         not_found_restore(move |reader| {
             self.0(reader)?;
             self.1(reader)?;
@@ -195,11 +195,11 @@ where
 
     fn parse_separated<S, RSep>(
         &mut self,
-        reader: &mut Reader<'a, Err, C>,
+        reader: &mut ParserInput<'a, Err, C>,
         mut separator: S,
     ) -> ParserResult<(), Err>
     where
-        S: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<RSep, Err>,
+        S: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<RSep, Err>,
     {
         not_found_restore(move |reader| {
             self.0(reader)?;
@@ -238,7 +238,7 @@ mod test {
             let input: String = texts.join("");
             let mut value: Vec<_> = texts.iter().map(|t| read_text(t.as_str())).collect();
 
-            let mut reader = Reader::new(input.as_str());
+            let mut reader = ParserInput::new(input.as_str());
             let mut parser = tuple_ignore((value.remove(0),));
             let result = parser(&mut reader);
             assert_eq!(result, Ok(()), "Step: {}", i);
@@ -262,7 +262,7 @@ mod test {
             let input: String = texts.join("");
             let mut value: Vec<_> = texts.iter().map(|t| read_text(t.as_str())).collect();
 
-            let mut reader = Reader::new(input.as_str());
+            let mut reader = ParserInput::new(input.as_str());
             let mut parser = tuple_ignore((value.remove(0), value.remove(0)));
             let result = parser(&mut reader);
             assert_eq!(result, Ok(()), "Step: {}", i);
@@ -286,7 +286,7 @@ mod test {
             let input: String = texts.join("");
             let mut value: Vec<_> = texts.iter().map(|t| read_text(t.as_str())).collect();
 
-            let mut reader = Reader::new(input.as_str());
+            let mut reader = ParserInput::new(input.as_str());
             let mut parser = tuple_ignore((value.remove(0), value.remove(0), value.remove(0)));
             let result = parser(&mut reader);
             assert_eq!(result, Ok(()), "Step: {}", i);
@@ -310,7 +310,7 @@ mod test {
             let input: String = texts.join("");
             let mut value: Vec<_> = texts.iter().map(|t| read_text(t.as_str())).collect();
 
-            let mut reader = Reader::new(input.as_str());
+            let mut reader = ParserInput::new(input.as_str());
             let mut parser = tuple_ignore((
                 value.remove(0),
                 value.remove(0),
@@ -339,7 +339,7 @@ mod test {
             let input: String = texts.join("");
             let mut value: Vec<_> = texts.iter().map(|t| read_text(t.as_str())).collect();
 
-            let mut reader = Reader::new(input.as_str());
+            let mut reader = ParserInput::new(input.as_str());
             let mut parser = tuple_ignore((
                 value.remove(0),
                 value.remove(0),
@@ -369,7 +369,7 @@ mod test {
             let input: String = texts.join("|");
             let mut value: Vec<_> = texts.iter().map(|t| read_text(t.as_str())).collect();
 
-            let mut reader = Reader::new(input.as_str());
+            let mut reader = ParserInput::new(input.as_str());
             let mut parser = separated_tuple_ignore((value.remove(0),), read_text("|"));
             let result = parser(&mut reader);
             assert_eq!(result, Ok(()), "Step: {}", i);
@@ -393,7 +393,7 @@ mod test {
             let input: String = texts.join("|");
             let mut value: Vec<_> = texts.iter().map(|t| read_text(t.as_str())).collect();
 
-            let mut reader = Reader::new(input.as_str());
+            let mut reader = ParserInput::new(input.as_str());
             let mut parser =
                 separated_tuple_ignore((value.remove(0), value.remove(0)), read_text("|"));
             let result = parser(&mut reader);
@@ -418,7 +418,7 @@ mod test {
             let input: String = texts.join("|");
             let mut value: Vec<_> = texts.iter().map(|t| read_text(t.as_str())).collect();
 
-            let mut reader = Reader::new(input.as_str());
+            let mut reader = ParserInput::new(input.as_str());
             let mut parser = separated_tuple_ignore(
                 (value.remove(0), value.remove(0), value.remove(0)),
                 read_text("|"),
@@ -445,7 +445,7 @@ mod test {
             let input: String = texts.join("|");
             let mut value: Vec<_> = texts.iter().map(|t| read_text(t.as_str())).collect();
 
-            let mut reader = Reader::new(input.as_str());
+            let mut reader = ParserInput::new(input.as_str());
             let mut parser = separated_tuple_ignore(
                 (
                     value.remove(0),
@@ -477,7 +477,7 @@ mod test {
             let input: String = texts.join("|");
             let mut value: Vec<_> = texts.iter().map(|t| read_text(t.as_str())).collect();
 
-            let mut reader = Reader::new(input.as_str());
+            let mut reader = ParserInput::new(input.as_str());
             let mut parser = separated_tuple_ignore(
                 (
                     value.remove(0),

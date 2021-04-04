@@ -5,7 +5,7 @@ pub use alternatives_ignore::*;
 use crate::parsers::helpers::map_result;
 use crate::parsers::helpers::not_found_restore;
 use crate::result::{ParserResult, ParserResultError};
-use crate::Reader;
+use crate::ParserInput;
 
 mod alternatives;
 mod alternatives_ignore;
@@ -14,10 +14,10 @@ mod alternatives_ignore;
 pub fn branch_if<'a, Cond, Then, C, R, Rc, Err>(
     mut condition: Cond,
     mut then: Then,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<Option<R>, Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<Option<R>, Err>
 where
-    Cond: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<Rc, Err>,
-    Then: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
+    Cond: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<Rc, Err>,
+    Then: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
 {
     not_found_restore(move |reader| match condition(reader) {
         Ok(_) => Ok(Some(then(reader)?)),
@@ -31,11 +31,11 @@ pub fn branch_if_else<'a, Cond, Then, Else, C, R, Rc, Err>(
     mut condition: Cond,
     mut then: Then,
     mut else_parser: Else,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>
 where
-    Cond: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<Rc, Err>,
-    Then: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
-    Else: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
+    Cond: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<Rc, Err>,
+    Then: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
+    Else: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
 {
     not_found_restore(move |reader| match condition(reader) {
         Ok(_) => then(reader),
@@ -49,10 +49,10 @@ where
 pub fn branch_while<'a, Cond, Then, C, Rc, R, Err>(
     condition: Cond,
     then: Then,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<Vec<R>, Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<Vec<R>, Err>
 where
-    Cond: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<Rc, Err>,
-    Then: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
+    Cond: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<Rc, Err>,
+    Then: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
 {
     crate::parsers::sequence::repeat(
         ..,
@@ -75,7 +75,7 @@ mod test {
 
     #[test]
     fn test_branch_if() {
-        let mut reader = Reader::new("This is a test");
+        let mut reader = ParserInput::new("This is a test");
         let mut parser = branch_if(|_| Ok(()), read_text("This"));
         let result = parser(&mut reader);
         assert_eq!(result, Ok(Some("This")));
@@ -90,12 +90,12 @@ mod test {
 
     #[test]
     fn test_branch_if_else() {
-        let mut reader = Reader::new("This is a test");
+        let mut reader = ParserInput::new("This is a test");
         let mut parser = branch_if_else(|_| Ok(()), read_text("This"), read_text("Th"));
         let result = parser(&mut reader);
         assert_eq!(result, Ok("This"));
 
-        let mut reader = Reader::new("This is a test");
+        let mut reader = ParserInput::new("This is a test");
         let mut parser = branch_if_else(
             |_| -> ParserResult<(), ()> { Err(ParserResultError::NotFound) },
             read_text("This"),
@@ -115,7 +115,7 @@ mod test_alloc {
 
     #[test]
     fn test_branch_while() {
-        let mut reader = Reader::new("abcdabcda");
+        let mut reader = ParserInput::new("abcdabcda");
         let mut parser = branch_while(read_text("a"), read_text("bcd"));
         let result = parser(&mut reader);
         assert_eq!(result, Ok(vec!["bcd", "bcd"]));

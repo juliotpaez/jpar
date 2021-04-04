@@ -1,9 +1,9 @@
 use crate::parsers::helpers::not_found_restore;
 use crate::result::{ParserResult, ParserResultError};
-use crate::Reader;
+use crate::ParserInput;
 
 /// It is ok only at the end of the input.
-pub fn end<C, Err>(reader: &mut Reader<Err, C>) -> ParserResult<(), Err> {
+pub fn end<C, Err>(reader: &mut ParserInput<Err, C>) -> ParserResult<(), Err> {
     if reader.is_end() {
         Ok(())
     } else {
@@ -14,9 +14,9 @@ pub fn end<C, Err>(reader: &mut Reader<Err, C>) -> ParserResult<(), Err> {
 /// Executes the parser and returns its value not consuming any character in the process.
 pub fn not_consume<'a, P, C, R, Err>(
     mut parser: P,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>
 where
-    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
+    P: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
 {
     move |reader| {
         let init_cursor = reader.save_cursor();
@@ -31,10 +31,10 @@ where
 pub fn verify<'a, C, R, P, V, Err>(
     mut parser: P,
     mut verifier: V,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>
 where
-    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
-    V: FnMut(&mut Reader<'a, Err, C>, &R) -> bool,
+    P: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
+    V: FnMut(&mut ParserInput<'a, Err, C>, &R) -> bool,
 {
     not_found_restore(move |reader| {
         let result = parser(reader)?;
@@ -50,9 +50,9 @@ where
 /// Returns None when the the parser is not found.
 pub fn optional<'a, P, C, R, Err>(
     mut parser: P,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<Option<R>, Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<Option<R>, Err>
 where
-    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
+    P: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
 {
     move |reader| match parser(reader) {
         Ok(v) => Ok(Some(v)),
@@ -64,9 +64,9 @@ where
 /// Returns the default value of `R` when the the parser is not found.
 pub fn optional_default<'a, P, C, R: Default, Err>(
     mut parser: P,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>
 where
-    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
+    P: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
 {
     move |reader| match parser(reader) {
         Ok(v) => Ok(v),
@@ -78,9 +78,9 @@ where
 /// Returns the default value of `R` when the the parser is not found.
 pub fn not<'a, P, C, R, Err>(
     mut parser: P,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<(), Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<(), Err>
 where
-    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
+    P: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
 {
     move |reader| match parser(reader) {
         Ok(_) => Err(ParserResultError::NotFound),
@@ -92,9 +92,9 @@ where
 /// Succeeds if all the input has been consumed by its child parser.
 pub fn all_consumed<'a, P, C, R, Err>(
     mut parser: P,
-) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>
+) -> impl FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>
 where
-    P: FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>,
+    P: FnMut(&mut ParserInput<'a, Err, C>) -> ParserResult<R, Err>,
 {
     move |reader| {
         let result = parser(reader)?;
@@ -119,18 +119,18 @@ mod test {
 
     #[test]
     fn test_end() {
-        let mut reader = Reader::new("This is a test");
+        let mut reader = ParserInput::new("This is a test");
         let result = end(&mut reader);
         assert_eq!(result, Err(ParserResultError::NotFound));
 
-        let mut reader = Reader::new("");
+        let mut reader = ParserInput::new("");
         let result = end(&mut reader);
         assert_eq!(result, Ok(()));
     }
 
     #[test]
     fn test_not_consume() {
-        let mut reader = Reader::new("This is a test");
+        let mut reader = ParserInput::new("This is a test");
         let mut parser = not_consume(ascii_alpha1);
 
         let result = parser(&mut reader);
@@ -140,7 +140,7 @@ mod test {
 
     #[test]
     fn test_verify() {
-        let mut reader = Reader::new("This is a test");
+        let mut reader = ParserInput::new("This is a test");
         let mut parser = verify(ascii_alpha1, |_, x| *x == "This");
 
         let result = parser(&mut reader);
@@ -152,7 +152,7 @@ mod test {
 
     #[test]
     fn test_optional() {
-        let mut reader = Reader::new("This is a test");
+        let mut reader = ParserInput::new("This is a test");
         let mut parser = optional(ascii_alpha1);
 
         let result = parser(&mut reader);
@@ -164,7 +164,7 @@ mod test {
 
     #[test]
     fn test_optional_default() {
-        let mut reader = Reader::new("This is a test");
+        let mut reader = ParserInput::new("This is a test");
         let mut parser = optional_default(ascii_alpha1);
 
         let result = parser(&mut reader);
@@ -176,26 +176,26 @@ mod test {
 
     #[test]
     fn test_not() {
-        let mut reader = Reader::new("This is a test");
+        let mut reader = ParserInput::new("This is a test");
         let mut parser = not(ascii_alpha1);
 
         let result = parser(&mut reader);
         assert_eq!(result, Err(ParserResultError::NotFound));
 
-        let mut reader = Reader::new("   test2");
+        let mut reader = ParserInput::new("   test2");
         let result = parser(&mut reader);
         assert_eq!(result, Ok(()));
     }
 
     #[test]
     fn test_all_consumed() {
-        let mut reader = Reader::new("Test");
+        let mut reader = ParserInput::new("Test");
         let mut parser = all_consumed(ascii_alpha1);
 
         let result = parser(&mut reader);
         assert_eq!(result, Ok("Test"));
 
-        let mut reader = Reader::new("   test2");
+        let mut reader = ParserInput::new("   test2");
         let result = parser(&mut reader);
         assert_eq!(result, Err(ParserResultError::NotFound));
     }

@@ -8,8 +8,8 @@ use jpar::characters::{decimal_digit1, read_any_of, read_char, ucd_inline_whites
 use jpar::helpers::map_result;
 use jpar::sequence::{delimited, repeat_and_fold, tuple};
 use jpar::verifiers::text_verifier;
+use jpar::ParserInput;
 use jpar::ParserResult;
-use jpar::Reader;
 
 // DISCLAIMER: This is a copy of nom's arithmetic bench with the code adapted. All rights reserved to them.
 
@@ -18,7 +18,7 @@ use jpar::Reader;
 // We transform an integer string into a i64, ignoring surrounding whitespaces
 // We look for a digit suite, and try to convert it.
 // If there are no digits, we look for a parenthesized expression.
-fn factor(input: &mut Reader) -> ParserResult<i64> {
+fn factor(input: &mut ParserInput) -> ParserResult<i64> {
     delimited(
         ucd_inline_whitespace0,
         alternative((
@@ -36,7 +36,7 @@ fn factor(input: &mut Reader) -> ParserResult<i64> {
 // We read an initial factor and for each time we find
 // a * or / operator followed by another factor, we do
 // the math by folding everything
-fn term(input: &mut Reader) -> ParserResult<i64> {
+fn term(input: &mut ParserInput) -> ParserResult<i64> {
     let init = factor(input)?;
     repeat_and_fold(
         ..,
@@ -52,7 +52,7 @@ fn term(input: &mut Reader) -> ParserResult<i64> {
     )(input)
 }
 
-fn expr(input: &mut Reader) -> ParserResult<i64> {
+fn expr(input: &mut ParserInput) -> ParserResult<i64> {
     let init = term(input)?;
     repeat_and_fold(
         ..,
@@ -70,7 +70,7 @@ fn expr(input: &mut Reader) -> ParserResult<i64> {
 
 fn arithmetic_bench(c: &mut Criterion) {
     let data = "  2*2 / ( 5 - 1) + 3 / 4 * (2 - 7 + 567 *12 /2) + 3*(1+2*( 45 /2));";
-    let mut reader = Reader::new(data);
+    let mut reader = ParserInput::new(data);
 
     let result = expr(&mut reader);
     assert_eq!(
@@ -81,7 +81,7 @@ fn arithmetic_bench(c: &mut Criterion) {
     assert_eq!(reader.remaining_content(), ";");
 
     c.bench_function("arithmetic", |b| {
-        let mut reader = Reader::new(data);
+        let mut reader = ParserInput::new(data);
         let init_cursor = reader.save_cursor();
         b.iter(|| {
             reader.restore(init_cursor.clone());
