@@ -111,6 +111,17 @@ pub fn value<'a, C, R: Clone, Err>(
     move |_| Ok(value.clone())
 }
 
+/// Always succeeds with given value without consuming any input.
+/// The value is built dynamically.
+pub fn value_dyn<'a, C, R, Err, VFn>(
+    mut value_fn: VFn,
+) -> impl FnMut(&mut Reader<'a, Err, C>) -> ParserResult<R, Err>
+where
+    VFn: FnMut(&mut Reader<'a, Err, C>) -> R,
+{
+    move |reader| Ok(value_fn(reader))
+}
+
 /// Always fails with the given error without consuming any input.
 pub fn error<'a, C, R, Err: Clone>(
     error: Err,
@@ -275,6 +286,18 @@ mod test {
     fn test_value() {
         let mut reader = Reader::new("This is a test");
         let mut parser = value(true);
+
+        let result = parser(&mut reader);
+        assert_eq!(result, Ok(true));
+
+        let result = parser(&mut reader);
+        assert_eq!(result, Ok(true));
+    }
+
+    #[test]
+    fn test_value_dyn() {
+        let mut reader = Reader::new("This is a test");
+        let mut parser = value_dyn(|_| true);
 
         let result = parser(&mut reader);
         assert_eq!(result, Ok(true));
